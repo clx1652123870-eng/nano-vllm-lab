@@ -2,6 +2,9 @@ from copy import copy
 from enum import Enum, auto
 from itertools import count
 
+import torch
+
+from nanovllm.multimodal import MultiModalPrompt
 from nanovllm.sampling_params import SamplingParams
 
 
@@ -15,7 +18,14 @@ class Sequence:
     block_size = 256
     counter = count()
 
-    def __init__(self, token_ids: list[int], sampling_params = SamplingParams()):
+    def __init__(
+        self,
+        token_ids: list[int],
+        sampling_params = SamplingParams(),
+        multimodal: MultiModalPrompt | None = None,
+        mrope_positions: torch.Tensor | None = None,
+        mrope_position_delta: int = 0,
+    ):
         self.seq_id = next(Sequence.counter)
         self.status = SequenceStatus.WAITING
         self.token_ids = copy(token_ids)
@@ -29,6 +39,10 @@ class Sequence:
         self.temperature = sampling_params.temperature
         self.max_tokens = sampling_params.max_tokens
         self.ignore_eos = sampling_params.ignore_eos
+        self.pixel_values = multimodal.pixel_values if multimodal else None
+        self.image_grid_thw = multimodal.image_grid_thw if multimodal else None
+        self.mrope_positions = mrope_positions
+        self.mrope_position_delta = mrope_position_delta
 
     def __len__(self):
         return self.num_tokens
@@ -39,6 +53,10 @@ class Sequence:
     @property
     def is_finished(self):
         return self.status == SequenceStatus.FINISHED
+
+    @property
+    def has_multimodal(self):
+        return self.pixel_values is not None or self.image_grid_thw is not None
 
     @property
     def num_completion_tokens(self):
@@ -71,13 +89,41 @@ class Sequence:
 
     def __getstate__(self):
         last_state = self.last_token if not self.is_prefill else self.token_ids
-        return (self.num_tokens, self.num_prompt_tokens, self.num_cached_tokens, self.num_scheduled_tokens, self.block_table, last_state)
+        multimodal_state = (
+            self.pixel_values,
+            self.image_grid_thw,
+            self.mrope_positions,
+            self.mrope_position_delta,
+        )
+        return (
+            self.num_tokens,
+            self.num_prompt_tokens,
+            self.num_cached_tokens,
+            self.num_scheduled_tokens,
+            self.block_table,
+            last_state,
+            multimodal_state,
+        )
 
     def __setstate__(self, state):
-        self.num_tokens, self.num_prompt_tokens, self.num_cached_tokens, self.num_scheduled_tokens, self.block_table, last_state = state
+        (
+            self.num_tokens,
+            self.num_prompt_tokens,
+            self.num_cached_tokens,
+            self.num_scheduled_tokens,
+            self.block_table,
+            last_state,
+            multimodal_state,
+        ) = state
         if isinstance(last_state, list):
             self.token_ids = last_state
             self.last_token = self.token_ids[-1]
         else:
             self.token_ids = []
             self.last_token = last_state
+        (
+            self.pixel_values,
+            self.image_grid_thw,
+            self.mrope_positions,
+            self.mrope_position_delta,
+        ) = multimodal_state

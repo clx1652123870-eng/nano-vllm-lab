@@ -6,6 +6,7 @@ from transformers import AutoTokenizer
 import torch.multiprocessing as mp
 
 from nanovllm.config import Config
+from nanovllm.multimodal import MultiModalPrompt, compute_qwen2_5_vl_mrope_positions
 from nanovllm.sampling_params import SamplingParams
 from nanovllm.engine.sequence import Sequence
 from nanovllm.engine.scheduler import Scheduler
@@ -18,6 +19,7 @@ class LLMEngine:
         config_fields = {field.name for field in fields(Config)}
         config_kwargs = {k: v for k, v in kwargs.items() if k in config_fields}
         config = Config(model, **config_kwargs)
+        self.config = config
         Sequence.block_size = config.kvcache_block_size
         self.ps = []
         self.events = []
@@ -40,10 +42,43 @@ class LLMEngine:
         for p in self.ps:
             p.join()
 
-    def add_request(self, prompt: str | list[int], sampling_params: SamplingParams):
+    def add_request(
+        self,
+        prompt: str | list[int] | MultiModalPrompt,
+        sampling_params: SamplingParams,
+    ):
+        multimodal = None
+        mrope_positions = None
+        mrope_position_delta = 0
+        if isinstance(prompt, MultiModalPrompt):
+            if self.config.tensor_parallel_size != 1:
+                raise ValueError("multimodal inference currently requires tensor_parallel_size=1")
+            if not hasattr(self.config.hf_config, "vision_config"):
+                raise ValueError("multimodal prompts require a vision-language model")
+            multimodal = prompt
+            prompt = prompt.input_ids
+            mrope_positions, mrope_position_delta = compute_qwen2_5_vl_mrope_positions(
+                prompt,
+                multimodal.mm_token_type_ids,
+                multimodal.image_grid_thw,
+                self.config.hf_config.vision_config.spatial_merge_size,
+                multimodal.attention_mask,
+            )
+            if len(prompt) > self.config.max_num_batched_tokens:
+                raise ValueError(
+                    "multimodal prompt length exceeds max_num_batched_tokens; "
+                    "increase max_num_batched_tokens because chunked multimodal "
+                    "prefill is not supported yet"
+                )
         if isinstance(prompt, str):
             prompt = self.tokenizer.encode(prompt)
-        seq = Sequence(prompt, sampling_params)
+        seq = Sequence(
+            prompt,
+            sampling_params,
+            multimodal=multimodal,
+            mrope_positions=mrope_positions,
+            mrope_position_delta=mrope_position_delta,
+        )
         self.scheduler.add(seq)
 
     def step(self):
@@ -59,7 +94,7 @@ class LLMEngine:
 
     def generate(
         self,
-        prompts: list[str] | list[list[int]],
+        prompts: list[str] | list[list[int]] | list[MultiModalPrompt],
         sampling_params: SamplingParams | list[SamplingParams],
         use_tqdm: bool = True,
     ) -> list[str]:

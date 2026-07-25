@@ -56,6 +56,10 @@ class BlockManager:
         self.free_block_ids.append(block_id)
 
     def can_allocate(self, seq: Sequence) -> int:
+        if seq.has_multimodal:
+            if len(self.free_block_ids) < seq.num_blocks:
+                return -1
+            return 0
         h = -1
         num_cached_blocks = 0
         num_new_blocks = seq.num_blocks
@@ -108,6 +112,8 @@ class BlockManager:
             seq.block_table.append(self._allocate_block())
 
     def hash_blocks(self, seq: Sequence):
+        if seq.has_multimodal:
+            return
         start = seq.num_cached_tokens // self.block_size
         end = (seq.num_cached_tokens + seq.num_scheduled_tokens) // self.block_size
         if start == end: return
