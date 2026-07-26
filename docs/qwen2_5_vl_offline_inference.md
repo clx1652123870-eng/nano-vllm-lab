@@ -46,6 +46,22 @@
   --no-tqdm
 ```
 
+运行完整对齐基线：
+
+```bash
+/home/agua/anaconda3/envs/yolo26/bin/python examples/qwen2_5_vl_alignment.py \
+  --max-new-tokens 8 \
+  --max-model-len 4096 \
+  --max-num-batched-tokens 4096 \
+  --gpu-memory-utilization 0.72
+```
+
+这个脚本会检查三层：
+
+- `input_ids`：nano-vllm 使用的 prompt token 必须和 `AutoProcessor` 输出一致。
+- MRoPE：nano-vllm 计算的 3D position ids 和 `mrope_position_delta` 必须和 Transformers helper 一致。
+- Greedy token：Transformers 和 nano-vllm 生成的前 N 个 token 必须一致。
+
 当前验证结果，两边前 8 个 token 一致：
 
 ```text
@@ -79,6 +95,7 @@ PIL Image + text
 关键文件：
 
 - `examples/qwen2_5_vl_offline.py`：离线运行入口。
+- `examples/qwen2_5_vl_alignment.py`：Transformers 与 nano-vllm 的回归对齐脚本。
 - `nanovllm/multimodal.py`：`MultiModalPrompt` 和 Qwen2.5-VL 3D MRoPE position 计算。
 - `nanovllm/engine/sequence.py`：保存图片 tensor、grid 和 MRoPE delta。
 - `nanovllm/engine/scheduler.py`：限制多模态 prefill 必须一次完成。
