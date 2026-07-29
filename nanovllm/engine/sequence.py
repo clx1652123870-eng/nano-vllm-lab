@@ -12,6 +12,7 @@ class SequenceStatus(Enum):
     WAITING = auto()
     RUNNING = auto()
     FINISHED = auto()
+    CANCELLED = auto()
 
 
 class Sequence:
@@ -39,6 +40,7 @@ class Sequence:
         self.temperature = sampling_params.temperature
         self.max_tokens = sampling_params.max_tokens
         self.ignore_eos = sampling_params.ignore_eos
+        self.finish_reason: str | None = None
         self.pixel_values = multimodal.pixel_values if multimodal else None
         self.image_grid_thw = multimodal.image_grid_thw if multimodal else None
         self.mrope_positions = mrope_positions

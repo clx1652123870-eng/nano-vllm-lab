@@ -24,29 +24,40 @@ class ModelRunner:
         self.rank = rank
         self.event = event
 
-        dist.init_process_group("nccl", "tcp://localhost:2333", world_size=self.world_size, rank=rank)
+        dist.init_process_group(
+            "nccl",
+            f"tcp://127.0.0.1:{config.distributed_init_port}",
+            world_size=self.world_size,
+            rank=rank,
+        )
         torch.cuda.set_device(rank)
         default_dtype = torch.get_default_dtype()
-        torch.set_default_dtype(hf_config.dtype or text_config.dtype)
-        torch.set_default_device("cuda")
-        self.model = get_model_class(hf_config)(hf_config)
-        load_model(self.model, config.model)
-        self.sampler = Sampler()
-        self.warmup_model()
-        self.allocate_kv_cache()
-        if not self.enforce_eager:
-            self.capture_cudagraph()
-        torch.set_default_device("cpu")
-        torch.set_default_dtype(default_dtype)
+        try:
+            torch.set_default_dtype(hf_config.dtype or text_config.dtype)
+            torch.set_default_device("cuda")
+            self.model = get_model_class(hf_config)(hf_config)
+            load_model(self.model, config.model)
+            self.sampler = Sampler()
+            self.warmup_model()
+            self.allocate_kv_cache()
+            if not self.enforce_eager:
+                self.capture_cudagraph()
 
-        if self.world_size > 1:
-            if rank == 0:
-                self.shm = SharedMemory(name="nanovllm", create=True, size=2**20)
-                dist.barrier()
-            else:
-                dist.barrier()
-                self.shm = SharedMemory(name="nanovllm")
-                self.loop()
+            if self.world_size > 1:
+                if rank == 0:
+                    self.shm = SharedMemory(name="nanovllm", create=True, size=2**20)
+                    dist.barrier()
+                else:
+                    dist.barrier()
+                    self.shm = SharedMemory(name="nanovllm")
+                    self.loop()
+        except BaseException:
+            if dist.is_initialized():
+                dist.destroy_process_group()
+            raise
+        finally:
+            torch.set_default_device("cpu")
+            torch.set_default_dtype(default_dtype)
 
     def exit(self):
         if self.world_size > 1:

@@ -1,6 +1,6 @@
 # Nano-vLLM 项目上下文与后续开发交接
 
-> 更新时间：2026-07-23
+> 更新时间：2026-07-28
 > 用途：在新的 Codex 对话中快速恢复项目背景、代码现状、技术决策和后续计划。
 > 工作目录：`/home/agua/tensorrtlearning/nano-vllm`
 
@@ -20,14 +20,25 @@
 - Qwen2.5-VL checkpoint 权重名称映射。
 - `Config` 和 `ModelRunner` 对 VLM `text_config` 的适配。
 - 模型结构、权重映射、MRoPE 和视觉 FlashAttention 数值验证。
+- Processor 到 `Sequence/ModelRunner` 的单图多模态数据通路。
+- Qwen2.5-VL 3D MRoPE position 和 Decode delta 管理。
+- Qwen2.5-VL 单图离线推理。
+- Transformers 与 nano-vllm 的 greedy token 对齐基线。
+- 离线 TTFT、TPOT、吞吐和显存 profiling。
+- FastAPI 单图非流式在线接口。
+- `AsyncLLMEngine` 请求队列、Future 和专用 engine thread。
+- Qwen2.5-VL 单图 prefill、批量 decode 的 continuous batching。
+- 在线 C1/CN profiling 和 JSON 报告。
+- SSE 逐 token 流式输出。
+- 客户端断开/超时后的请求取消和 KV Cache 回收。
+- HTTP 最大并发限制和 429 backpressure。
+- OpenAI 兼容的 `/v1/chat/completions` 非流式/流式接口。
+- C1/C2/C4 greedy token、decode batch 和系统吞吐回归脚本。
 
 当前尚未完成：
 
-- 图片从 Processor 进入 `Sequence` 的数据通路。
-- `Scheduler` 和 `ModelRunner` 对多模态输入的调度。
-- 每个请求的 3D MRoPE position 和 `mrope_position_delta` 管理。
-- 单图端到端离线推理。
-- nano-vllm 在线 HTTP/OpenAI API 服务。
+- 同一个 prefill batch 中处理多张图片。
+- API 进程与 EngineCore 进程拆分。
 - AWQ INT4 权重加载和量化 Linear。
 - Attention 后端统一抽象与系统 benchmark。
 - CUDA/Triton 关键算子融合。
@@ -37,8 +48,14 @@
 ```text
 Qwen2.5-VL 模型层与加载基础：已完成
 Qwen2.5-VL 文本路径基础：已接入
-Qwen2.5-VL 图片端到端离线推理：未打通
-nano-vllm 在线推理：未实现
+Qwen2.5-VL 图片端到端离线推理：已完成
+Transformers/nano-vllm 离线对齐：已完成
+nano-vllm 在线非流式推理：已完成
+Async request queue/Future：已完成
+单图 prefill + continuous decode batching：已完成
+SSE/OpenAI API/取消/超时/并发保护：已实现
+C1/C2/C4 自动回归：脚本和真实 Qwen2.5-VL 回归均已完成
+EngineCore 进程拆分：未实现
 AWQ/算子优化：未开始正式编码
 ```
 
@@ -289,41 +306,21 @@ git@github.com:clx1652123870-eng/nano-vllm-lab.git
 main
 ```
 
-当前基线 commit：
+当前已提交基线：
 
 ```text
-bb823b3 Merge pull request #218 from GeeeekExplorer/chunked-prefill-refactor
+f85cf92 test
 ```
 
-截至本文创建时，Qwen2.5-VL 修改尚未 commit：
+当前 AsyncLLM、continuous batching 和在线文档修改尚未 commit。提交前检查：
 
 ```text
- M nanovllm/config.py
- M nanovllm/engine/model_runner.py
-?? nanovllm/models/qwen2_5_vl.py
-?? nanovllm/models/registry.py
-?? NANO_VLLM_PROJECT_CONTEXT.md
+git status --short --branch
+git diff --check
+python -m unittest discover -s tests -p 'test_async_llm_engine.py' -v
 ```
 
-建议下一次提交前检查：
-
-```bash
-git status
-git diff
-git diff --cached
-```
-
-建议提交：
-
-```bash
-git add nanovllm/config.py
-git add nanovllm/engine/model_runner.py
-git add nanovllm/models/qwen2_5_vl.py
-git add nanovllm/models/registry.py
-git add NANO_VLLM_PROJECT_CONTEXT.md
-git commit -m "feat: add Qwen2.5-VL model foundation"
-git push
-```
+不要自动提交 `profiles/` 中的临时 benchmark，除非明确需要保留为性能基线。
 
 ## 6. 原始 nano-vllm 架构
 
@@ -953,7 +950,11 @@ Qwen3 config
     -> Qwen3ForCausalLM
 ```
 
-## 14. 当前尚未打通的多模态链路
+## 14. 历史记录：当时尚未打通的多模态链路
+
+> 本节记录实现前的缺口，当前这些链路已经打通。实际实现以
+> `nanovllm/multimodal.py`、`Sequence`、`Scheduler`、`ModelRunner` 和
+> `docs/qwen2_5_vl_offline_inference.md` 为准。
 
 现有 `LLMEngine.add_request()` 只接受：
 
@@ -994,7 +995,7 @@ self.model(input_ids, positions)
 
 并没有传入图片。因此当前不能认为已经支持图片推理。
 
-## 15. 下一步：单图离线推理实施方案
+## 15. 历史实施方案：单图离线推理（已完成）
 
 建议按照以下顺序改造，先不做 HTTP。
 
@@ -1145,15 +1146,14 @@ self.model(input_ids, positions)
 
 ### 15.7 多请求 batching
 
-第一版可以限制：
+当前实现限制：
 
 ```text
-一个 batch 中只允许一个带图片请求
+每个 Prefill step 只允许一个带图片请求
+多个已完成 Prefill 的请求允许一起 Decode
 ```
 
-先验证端到端正确性。
-
-之后再处理：
+后续再处理：
 
 - 多请求图片拼接。
 - `image_grid_thw` 拼接。
@@ -1190,48 +1190,92 @@ Prefill hidden states
 完整生成 token 序列
 ```
 
-## 16. 在线服务计划
+## 16. 在线服务现状
 
-官方 vLLM 0.24 已支持 Qwen2.5-VL 在线/离线推理，但当前 nano-vllm 没有在线服务。
+当前已经实现：
 
-应先完成离线单图，再实现在线服务。
+- FastAPI `POST /generate`。
+- FastAPI `POST /generate_stream`。
+- OpenAI `POST /v1/chat/completions`，支持非流式和 SSE。
+- `image_path` 和 `image_base64`。
+- 单进程、单 GPU、单图。
+- 模型和 Processor 启动时加载一次。
+- `AsyncLLMEngine` 专用 engine thread。
+- 线程安全 request queue。
+- `Future + asyncio.wrap_future()` 返回结果。
+- `AsyncEngineStreamEvent` 和 per-request `asyncio.Queue` 返回 token。
+- `loop.call_soon_threadsafe()` 跨线程投递 stream event。
+- `max_num_seqs` 活跃请求上限。
+- `max_concurrent_requests` HTTP in-flight 上限和 429。
+- 覆盖预处理、排队和生成的总请求 timeout。
+- 客户端断开、timeout 和显式 cancel。
+- `Scheduler.abort(seq_id)` 从 waiting/running 删除 sequence。
+- `BlockManager.deallocate()` 归还已取消 sequence 的 KV Cache blocks。
+- 每步单图 prefill。
+- 多请求 decode continuous batching。
+- TTFT、TPOT、batch size、requests/s 和 output tokens/s profiling。
+- JSON 原始结果和聚合报告。
+- C1/C2/C4 exact greedy token、decode batch 和吞吐矩阵报告。
 
-最小在线架构：
+当前架构：
 
 ```text
-HTTP/FastAPI 进程
-    -> 请求队列
-    -> 单个 LLMEngine worker
-    -> Scheduler continuous batching
-    -> token/result queue
-    -> HTTP response
+HTTP/FastAPI event loop
+    -> asyncio.to_thread(Processor)
+    -> ConcurrencyLimiter
+    -> AsyncLLMEngine 请求队列
+    -> 非流式 Future / 流式 asyncio.Queue
+
+nanovllm-engine thread
+    -> 接纳最多 max_num_seqs 个请求
+    -> LLMEngine.add_request()
+    -> LLMEngine.step_with_metadata()
+    -> Scheduler
+    -> 单图 Prefill / 多请求 Decode
+    -> step metadata(seq_id/token_id/finish_reason)
+    -> 按 seq_id 完成 Future 或发送 token event
+
+取消路径
+    -> AsyncLLMEngine.cancel(request_id)
+    -> LLMEngine.abort_request(seq_id)
+    -> Scheduler.abort(seq_id)
+    -> BlockManager.deallocate(seq)
 ```
 
-不要为每个 HTTP 请求启动一个模型进程。
-
-多个客户端：
+Qwen2.5-VL 当前 batching 约束：
 
 ```text
-多个 curl/终端/用户
-    -> 同一个 HTTP server
-    -> 同一个模型引擎
-    -> Scheduler 合并请求
+Prefill:
+    每个 step 只允许一个带图片请求
+
+Decode:
+    已完成 prefill 的多个请求可以组成 batch
 ```
 
-在线服务第一版可以只支持非流式：
+`max_num_seqs` 同时作为 engine admission capacity，超过容量的请求继续保留在外部
+queue，避免 scheduler 内部请求无界增长和 decode 饥饿。
+
+性能判断不能只看平均请求延迟。C1/CN 对比必须保持相同 prompt、图片、
+`max_new_tokens`、warmup 和 measure 次数，并同时比较：
 
 ```text
-POST /generate
+client/server E2E
+queue wait
+request/engine TTFT
+decode TPOT
+mean/max decode batch size
+整轮 requests/s
+整轮 output tokens/s
 ```
 
-后续再增加：
+详细说明：
 
-- SSE streaming。
-- `/v1/chat/completions`。
-- 请求取消。
-- 最大并发。
-- 超时。
-- 健康检查。
+```text
+docs/qwen2_5_vl_online_server.md
+```
+
+在线服务代码、无 GPU 协议/生命周期测试和真实 Qwen2.5-VL C1/C2/C4 回归已经
+完成。在线阶段暂时封板，下一阶段进入 Attention backend，不继续扩展外围 API。
 
 ## 17. Attention 后端重构建议
 
@@ -1597,12 +1641,11 @@ Day 21
 
 然后检查当前 git status 和相关源码。这个项目正在为 nano-vllm
 增加 Qwen2.5-VL、Attention 后端、AWQ 和算子融合支持。
-不要假设图片端到端推理已经完成。
+当前已经完成单图离线推理、异步 HTTP 服务和 continuous decode batching。
 
-当前下一步是打通单图离线推理：
-AutoProcessor -> Sequence -> Scheduler -> ModelRunner
--> pixel_values/image_grid_thw -> 3D MRoPE
--> Vision Embedding -> Text Decoder -> Decode。
+当前已经实现 SSE、请求取消、超时/并发保护、OpenAI Chat Completions，
+并通过真实 Qwen2.5-VL C1/C2/C4 正确性与吞吐回归。下一步开始
+Attention backend 抽象和 benchmark。不要直接跳到 ZMQ/EngineCore 多进程。
 ```
 
 ## 25. 新对话开始时建议先执行
@@ -1611,18 +1654,19 @@ AutoProcessor -> Sequence -> Scheduler -> ModelRunner
 cd /home/agua/tensorrtlearning/nano-vllm
 
 git status --short --branch
-git diff -- nanovllm/config.py
-git diff -- nanovllm/engine/model_runner.py
+git diff --check
 
 sed -n '1,220p' NANO_VLLM_PROJECT_CONTEXT.md
-sed -n '1,220p' nanovllm/models/qwen2_5_vl.py
-sed -n '1,120p' nanovllm/models/registry.py
+sed -n '1,280p' nanovllm/engine/async_llm_engine.py
+sed -n '1,180p' nanovllm/engine/llm_engine.py
+sed -n '1,220p' examples/qwen2_5_vl_server.py
 ```
 
 然后重点阅读：
 
 ```text
 nanovllm/engine/llm_engine.py
+nanovllm/engine/async_llm_engine.py
 nanovllm/engine/sequence.py
 nanovllm/engine/scheduler.py
 nanovllm/engine/model_runner.py
@@ -1633,7 +1677,7 @@ nanovllm/layers/attention.py
 ## 26. 继续开发时的原则
 
 1. 先正确性，后性能。
-2. 先单图单请求，后多模态 batching。
+2. 先单图 Prefill 和 Decode batching，后多图片 Prefill batching。
 3. 先离线推理，后在线服务。
 4. 先 BF16，后 AWQ。
 5. 先使用参考 backend 验证，再融合 kernel。
@@ -1642,3 +1686,80 @@ nanovllm/layers/attention.py
 8. 不因为单 kernel 更快就宣称端到端更快。
 9. 不把跨 Attention backend 的 BF16 差异直接判断为结构错误。
 10. 不在没有图片数据通路时宣称已经支持 Qwen2.5-VL 推理。
+
+## 27. 在线服务 V4 实现记录
+
+本轮新增：
+
+```text
+LLMEngine.step_with_metadata
+    -> token_id
+    -> finish_reason
+
+AsyncLLMEngine
+    -> stream_generate()
+    -> AsyncEngineStreamEvent(token/done/error)
+    -> cancel(request_id)
+    -> terminal request accounting
+
+Scheduler
+    -> abort(seq_id)
+    -> waiting/running 删除
+    -> KV Cache deallocate
+
+FastAPI
+    -> /generate_stream
+    -> /v1/chat/completions
+    -> max_concurrent_requests
+    -> request_timeout_seconds
+
+Regression
+    -> C1/C2/C4 exact greedy token comparison
+    -> decode batch assertion
+    -> requests/s 和 output_tokens/s speedup
+```
+
+取消在 engine step 边界执行，不尝试从另一个线程中断正在运行的 CUDA kernel。
+这是为了保证 Scheduler 和 KV Cache 所有权仍由 engine thread 独占。
+
+无 GPU 测试命令：
+
+```bash
+/home/agua/anaconda3/envs/yolo26/bin/python \
+  -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+真实 VLM 回归命令：
+
+```bash
+/home/agua/anaconda3/envs/yolo26/bin/python \
+  examples/qwen2_5_vl_online_regression.py \
+  --url http://127.0.0.1:8000/generate \
+  --image assets/dog.png \
+  --image-input base64 \
+  --max-new-tokens 8 \
+  --warmup-iters 2 \
+  --measure-iters 12 \
+  --concurrencies 1,2,4 \
+  --output-json profiles/qwen2_5_vl_online_regression.json
+```
+
+详细协议、架构和面试问答见：
+
+```text
+docs/qwen2_5_vl_online_server.md
+```
+
+真实回归结果（2026-07-28）：
+
+```text
+Greedy token correctness: passed, 0 mismatches
+Max decode batch: C1=1, C2=2, C4=4
+Output tokens/s: C1=15.380, C2=17.561, C4=19.526
+Throughput speedup vs C1: C2=1.142x, C4=1.270x
+Mean client E2E: C1=510.02ms, C2=891.38ms, C4=1615.06ms
+```
+
+C4 吞吐没有随 decode batch 线性提升，是因为 2049-token 的多模态 prefill
+仍逐请求串行执行，而当前只生成 8 个 token。这个结果证明 decode continuous
+batching 已生效，同时说明下一项端到端吞吐瓶颈在 multimodal prefill。

@@ -1,0 +1,2088 @@
+{
+  "created_at": "2026-07-28T16:02:15.677318+00:00",
+  "config": {
+    "url": "http://127.0.0.1:8000/generate",
+    "image": "/home/agua/tensorrtlearning/nano-vllm/assets/dog.png",
+    "image_input": "base64",
+    "prompt": "描述这张图片",
+    "max_new_tokens": 8,
+    "temperature": 0.0,
+    "ignore_eos": false,
+    "warmup_iters": 8,
+    "measure_iters": 12,
+    "concurrency": 4
+  },
+  "server": {
+    "status": "ok",
+    "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+    "served_model_name": "Qwen2.5-VL-3B-Instruct",
+    "mode": "single-process-single-gpu-continuous-batching",
+    "capabilities": {
+      "native_generate": true,
+      "native_sse": true,
+      "openai_chat_completions": true,
+      "openai_sse": true,
+      "request_cancellation": true
+    },
+    "limits": {
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "served_model_name": "Qwen2.5-VL-3B-Instruct",
+      "max_model_len": 4096,
+      "max_num_seqs": 4,
+      "max_num_batched_tokens": 4096,
+      "gpu_memory_utilization": 0.72,
+      "max_concurrent_requests": 16,
+      "request_timeout_seconds": 300.0
+    },
+    "concurrency": {
+      "limit": 16,
+      "in_flight": 0,
+      "available": 16,
+      "rejected": 0
+    },
+    "startup": {
+      "processor_load_ms": 330.07758716121316,
+      "engine_load_ms": 2151.337631046772
+    },
+    "engine": {
+      "accepting_requests": true,
+      "engine_thread_alive": true,
+      "active_request_ids": [],
+      "active_request_count": 0,
+      "cancel_requested_count": 0,
+      "queue_depth": 0,
+      "submitted_requests": 75,
+      "completed_requests": 74,
+      "failed_requests": 0,
+      "cancelled_requests": 1,
+      "outstanding_requests": 0,
+      "total_engine_steps": 425,
+      "prefill_engine_steps": 75,
+      "decode_engine_steps": 350,
+      "last_batch_size": 2,
+      "max_batch_size": 4,
+      "max_decode_batch_size": 4
+    }
+  },
+  "warmups": [
+    {
+      "request_id": "b5cc7f33-e001-4ac3-9c0c-680d0729b43a",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 89.0984651632607,
+        "queue_wait": 327.4227171204984,
+        "generation": 1165.0656149722636,
+        "total": 1583.6357451044023
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 1
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 361.0988948494196,
+        "request_ttft_ms": 777.6472978293896,
+        "prefill_latency_ms": 361.0988948494196,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5674.345807273781,
+        "decode_latency_ms": 101.26637993380427,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.466625704829182,
+        "decode_tokens_per_s": 69.12461968696574,
+        "generation_tokens_per_s": 6.866566051896102,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            361.0988948494196
+          ],
+          "decode": [
+            14.707426074892282,
+            14.008672907948494,
+            14.335783198475838,
+            14.22216696664691,
+            13.932458125054836,
+            14.445969834923744,
+            15.61390282586217
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.0904541015625,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.0516667262221935
+      },
+      "client_e2e_latency_ms": 1639.289292972535,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "d8dd904a-836e-48b1-a057-31b1ed3647e9",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 115.70192920044065,
+        "queue_wait": 1008.3329672925174,
+        "generation": 442.6222057081759,
+        "total": 1571.017884183675
+      },
+      "engine": {
+        "queue_depth_at_submit": 2,
+        "requests_ahead_at_submit": 3
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 340.88171599432826,
+        "request_ttft_ms": 1464.9397833272815,
+        "prefill_latency_ms": 340.88171599432826,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 6010.882672375694,
+        "decode_latency_ms": 101.26637993380427,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.466625704829182,
+        "decode_tokens_per_s": 69.12461968696574,
+        "generation_tokens_per_s": 18.07410450002244,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            340.88171599432826
+          ],
+          "decode": [
+            14.707426074892282,
+            14.008672907948494,
+            14.335783198475838,
+            14.22216696664691,
+            13.932458125054836,
+            14.445969834923744,
+            15.61390282586217
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.0904541015625,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.092239929628123
+      },
+      "client_e2e_latency_ms": 1628.2253409735858,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "a78b5bad-3e37-4634-8689-15e0fa8ce8a2",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 66.21457310393453,
+        "queue_wait": 2.180607058107853,
+        "generation": 1513.245230074972,
+        "total": 1582.0538359694183
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 0
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 345.2902939170599,
+        "request_ttft_ms": 413.7088949792087,
+        "prefill_latency_ms": 345.2902939170599,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5934.13726391098,
+        "decode_latency_ms": 101.26637993380427,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.466625704829182,
+        "decode_tokens_per_s": 69.12461968696574,
+        "generation_tokens_per_s": 5.286651390669607,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            345.2902939170599
+          ],
+          "decode": [
+            14.707426074892282,
+            14.008672907948494,
+            14.335783198475838,
+            14.22216696664691,
+            13.932458125054836,
+            14.445969834923744,
+            15.61390282586217
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.0904541015625,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.056717930902727
+      },
+      "client_e2e_latency_ms": 1606.3239625655115,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "502ceb40-2236-49f7-b9b5-b75032c6084a",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 101.66580090299249,
+        "queue_wait": 666.6686348617077,
+        "generation": 803.8669428788126,
+        "total": 1575.5775198340416
+      },
+      "engine": {
+        "queue_depth_at_submit": 1,
+        "requests_ahead_at_submit": 2
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 361.1687230877578,
+        "request_ttft_ms": 1129.5306510291994,
+        "prefill_latency_ms": 361.1687230877578,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5673.248731181321,
+        "decode_latency_ms": 101.26637993380427,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.466625704829182,
+        "decode_tokens_per_s": 69.12461968696574,
+        "generation_tokens_per_s": 9.951895734573135,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            361.1687230877578
+          ],
+          "decode": [
+            14.707426074892282,
+            14.008672907948494,
+            14.335783198475838,
+            14.22216696664691,
+            13.932458125054836,
+            14.445969834923744,
+            15.61390282586217
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.0904541015625,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.077503264226983
+      },
+      "client_e2e_latency_ms": 1606.703673955053,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "d12268db-4c14-46c3-8789-ed7eba75e0a3",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 106.70507000759244,
+        "queue_wait": 661.8907898664474,
+        "generation": 817.8093042224646,
+        "total": 1590.1017938740551
+      },
+      "engine": {
+        "queue_depth_at_submit": 1,
+        "requests_ahead_at_submit": 2
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 359.28461514413357,
+        "request_ttft_ms": 1127.9123667627573,
+        "prefill_latency_ms": 359.28461514413357,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5702.99955420581,
+        "decode_latency_ms": 100.38153175264597,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.340218821806568,
+        "decode_tokens_per_s": 69.73394286559575,
+        "generation_tokens_per_s": 9.782231577330894,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            359.28461514413357
+          ],
+          "decode": [
+            14.566795900464058,
+            14.414477162063122,
+            13.996270019561052,
+            14.077295083552599,
+            14.911416918039322,
+            14.090785756707191,
+            14.324490912258625
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08953857421875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.031124441730958
+      },
+      "client_e2e_latency_ms": 1637.5414808280766,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "f079b3a4-67bf-415d-812c-8a6e44187f6b",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 68.77128593623638,
+        "queue_wait": 1.0967981070280075,
+        "generation": 1525.1263258978724,
+        "total": 1595.8530441857874
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 0
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 363.29637188464403,
+        "request_ttft_ms": 433.1948379985988,
+        "prefill_latency_ms": 363.29637188464403,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5640.0232938483905,
+        "decode_latency_ms": 100.38153175264597,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.340218821806568,
+        "decode_tokens_per_s": 69.73394286559575,
+        "generation_tokens_per_s": 5.245467122397379,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            363.29637188464403
+          ],
+          "decode": [
+            14.566795900464058,
+            14.414477162063122,
+            13.996270019561052,
+            14.077295083552599,
+            14.911416918039322,
+            14.090785756707191,
+            14.324490912258625
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08953857421875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.012992912565857
+      },
+      "client_e2e_latency_ms": 1616.6545301675797,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "1bd6f76c-a196-478d-aa8b-d4e202813bc5",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 83.525484893471,
+        "queue_wait": 343.6115048825741,
+        "generation": 1159.297225996852,
+        "total": 1588.7767621316016
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 1
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 341.4075970649719,
+        "request_ttft_ms": 768.573529087007,
+        "prefill_latency_ms": 341.4075970649719,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 6001.623917027432,
+        "decode_latency_ms": 100.38153175264597,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.340218821806568,
+        "decode_tokens_per_s": 69.73394286559575,
+        "generation_tokens_per_s": 6.90073246153159,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            341.4075970649719
+          ],
+          "decode": [
+            14.566795900464058,
+            14.414477162063122,
+            13.996270019561052,
+            14.077295083552599,
+            14.911416918039322,
+            14.090785756707191,
+            14.324490912258625
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08953857421875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.035320373937685
+      },
+      "client_e2e_latency_ms": 1605.0656070001423,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "59fb9e72-c8cf-49f4-8b2c-481482468442",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 119.01838704943657,
+        "queue_wait": 1000.4363618791103,
+        "generation": 458.4452952258289,
+        "total": 1582.4309061281383
+      },
+      "engine": {
+        "queue_depth_at_submit": 2,
+        "requests_ahead_at_submit": 3
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 357.66145726665854,
+        "request_ttft_ms": 1477.1433882415295,
+        "prefill_latency_ms": 357.66145726665854,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5728.8812041951305,
+        "decode_latency_ms": 100.38153175264597,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.340218821806568,
+        "decode_tokens_per_s": 69.73394286559575,
+        "generation_tokens_per_s": 17.45028269089166,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            357.66145726665854
+          ],
+          "decode": [
+            14.566795900464058,
+            14.414477162063122,
+            13.996270019561052,
+            14.077295083552599,
+            14.911416918039322,
+            14.090785756707191,
+            14.324490912258625
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08953857421875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.055512988920475
+      },
+      "client_e2e_latency_ms": 1606.6438457928598,
+      "request_body_bytes": 2606695
+    }
+  ],
+  "measurements": [
+    {
+      "request_id": "3b1054ba-2771-43a4-9c88-b25ee62c7120",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 113.5332016274333,
+        "queue_wait": 677.8643690049648,
+        "generation": 802.1683669649065,
+        "total": 1596.8973939307034
+      },
+      "engine": {
+        "queue_depth_at_submit": 1,
+        "requests_ahead_at_submit": 2
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 342.6061379723251,
+        "request_ttft_ms": 1134.0370108373463,
+        "prefill_latency_ms": 342.6061379723251,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5980.628403585441,
+        "decode_latency_ms": 100.87799048051238,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.411141497216054,
+        "decode_tokens_per_s": 69.39075576998394,
+        "generation_tokens_per_s": 9.97296868021472,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            342.6061379723251
+          ],
+          "decode": [
+            15.065134037286043,
+            14.115054626017809,
+            14.732772950083017,
+            14.128584880381823,
+            14.499519020318985,
+            14.094852842390537,
+            14.242072124034166
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.00971448159753
+      },
+      "client_e2e_latency_ms": 1641.869428101927,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "ff676797-7019-428d-972d-6bcb338357f7",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 67.44438502937555,
+        "queue_wait": 1.1636829003691673,
+        "generation": 1525.0540957786143,
+        "total": 1594.103490933776
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 0
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 361.00385384634137,
+        "request_ttft_ms": 429.64798398315907,
+        "prefill_latency_ms": 361.00385384634137,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5675.839684725753,
+        "decode_latency_ms": 100.87799048051238,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.411141497216054,
+        "decode_tokens_per_s": 69.39075576998394,
+        "generation_tokens_per_s": 5.245715559955669,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            361.00385384634137
+          ],
+          "decode": [
+            15.065134037286043,
+            14.115054626017809,
+            14.732772950083017,
+            14.128584880381823,
+            14.499519020318985,
+            14.094852842390537,
+            14.242072124034166
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.018494749869627
+      },
+      "client_e2e_latency_ms": 1630.1868739537895,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "c1866067-1380-49fd-931b-88778bbbf339",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 90.88207175955176,
+        "queue_wait": 341.28241799771786,
+        "generation": 1161.428778897971,
+        "total": 1595.8384680561721
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 1
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 359.1839671134949,
+        "request_ttft_ms": 791.3769390434027,
+        "prefill_latency_ms": 359.1839671134949,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5704.597609036813,
+        "decode_latency_ms": 100.87799048051238,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.411141497216054,
+        "decode_tokens_per_s": 69.39075576998394,
+        "generation_tokens_per_s": 6.888067650253037,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            359.1839671134949
+          ],
+          "decode": [
+            15.065134037286043,
+            14.115054626017809,
+            14.732772950083017,
+            14.128584880381823,
+            14.499519020318985,
+            14.094852842390537,
+            14.242072124034166
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.013038700429677
+      },
+      "client_e2e_latency_ms": 1630.8016199618578,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "e9a0f19f-326e-45af-9337-c8d5d71bdb5f",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 123.26747737824917,
+        "queue_wait": 1000.137273222208,
+        "generation": 459.4860337674618,
+        "total": 1587.6009748317301
+      },
+      "engine": {
+        "queue_depth_at_submit": 2,
+        "requests_ahead_at_submit": 3
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 358.21013897657394,
+        "request_ttft_ms": 1481.6411500796676,
+        "prefill_latency_ms": 358.21013897657394,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5720.106097091795,
+        "decode_latency_ms": 100.87799048051238,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.411141497216054,
+        "decode_tokens_per_s": 69.39075576998394,
+        "generation_tokens_per_s": 17.410757699000417,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            358.21013897657394
+          ],
+          "decode": [
+            15.065134037286043,
+            14.115054626017809,
+            14.732772950083017,
+            14.128584880381823,
+            14.499519020318985,
+            14.094852842390537,
+            14.242072124034166
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.039049563979967
+      },
+      "client_e2e_latency_ms": 1619.9341039173305,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "77c2e052-c59d-4493-b7a5-9439ae65dcd5",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 74.43590182811022,
+        "queue_wait": 1.0335850529372692,
+        "generation": 1503.1592920422554,
+        "total": 1579.0922371670604
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 0
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 344.1671128384769,
+        "request_ttft_ms": 419.6645109914243,
+        "prefill_latency_ms": 344.1671128384769,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5953.503177863564,
+        "decode_latency_ms": 99.25965545699,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.179950779570001,
+        "decode_tokens_per_s": 70.52210656758884,
+        "generation_tokens_per_s": 5.322123904201041,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            344.1671128384769
+          ],
+          "decode": [
+            14.933953061699867,
+            14.155545271933079,
+            13.857657089829445,
+            14.273862820118666,
+            13.894408941268921,
+            14.055019244551659,
+            14.089209027588367
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.06620184160505
+      },
+      "client_e2e_latency_ms": 1607.5972123071551,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "96654f62-9b85-462b-85c5-98c2cdc02ad7",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 86.47255739197135,
+        "queue_wait": 324.0389758720994,
+        "generation": 1156.7147583700716,
+        "total": 1569.5675970055163
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 1
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 357.6602120883763,
+        "request_ttft_ms": 768.2076580822468,
+        "prefill_latency_ms": 357.6602120883763,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5728.901149042827,
+        "decode_latency_ms": 99.25965545699,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.179950779570001,
+        "decode_tokens_per_s": 70.52210656758884,
+        "generation_tokens_per_s": 6.916138954838625,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            357.6602120883763
+          ],
+          "decode": [
+            14.933953061699867,
+            14.155545271933079,
+            13.857657089829445,
+            14.273862820118666,
+            13.894408941268921,
+            14.055019244551659,
+            14.089209027588367
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.096945181120405
+      },
+      "client_e2e_latency_ms": 1598.7075278535485,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "182b1b0e-96ba-4886-a4bd-8ba3cda60d11",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 117.57414368912578,
+        "queue_wait": 996.3069260120392,
+        "generation": 441.0613002255559,
+        "total": 1560.0786982104182
+      },
+      "engine": {
+        "queue_depth_at_submit": 2,
+        "requests_ahead_at_submit": 3
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 341.3633881136775,
+        "request_ttft_ms": 1455.2676500752568,
+        "prefill_latency_ms": 341.3633881136775,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 6002.401169388622,
+        "decode_latency_ms": 99.25965545699,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.179950779570001,
+        "decode_tokens_per_s": 70.52210656758884,
+        "generation_tokens_per_s": 18.138068327257123,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            341.3633881136775
+          ],
+          "decode": [
+            14.933953061699867,
+            14.155545271933079,
+            13.857657089829445,
+            14.273862820118666,
+            13.894408941268921,
+            14.055019244551659,
+            14.089209027588367
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.12794643576435
+      },
+      "client_e2e_latency_ms": 1596.2842488661408,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "da8ad838-b2b5-4d03-a937-214723f71189",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 101.994838565588,
+        "queue_wait": 660.0265153683722,
+        "generation": 798.9833420142531,
+        "total": 1564.818532206118
+      },
+      "engine": {
+        "queue_depth_at_submit": 1,
+        "requests_ahead_at_submit": 2
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 357.84238670021296,
+        "request_ttft_ms": 1119.8931629769504,
+        "prefill_latency_ms": 357.84238670021296,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5725.98461265176,
+        "decode_latency_ms": 99.25965545699,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.179950779570001,
+        "decode_tokens_per_s": 70.52210656758884,
+        "generation_tokens_per_s": 10.012724395269416,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            357.84238670021296
+          ],
+          "decode": [
+            14.933953061699867,
+            14.155545271933079,
+            13.857657089829445,
+            14.273862820118666,
+            13.894408941268921,
+            14.055019244551659,
+            14.089209027588367
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.08966064453125,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.112413890396231
+      },
+      "client_e2e_latency_ms": 1587.6858551055193,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "050ebd98-ec53-480b-85f8-8bd87eb3f770",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 115.09858258068562,
+        "queue_wait": 662.0895997621119,
+        "generation": 815.8893119543791,
+        "total": 1596.5814399532974
+      },
+      "engine": {
+        "queue_depth_at_submit": 1,
+        "requests_ahead_at_submit": 2
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 356.34791711345315,
+        "request_ttft_ms": 1133.572401944548,
+        "prefill_latency_ms": 356.34791711345315,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5749.998531204112,
+        "decode_latency_ms": 100.47385096549988,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.353407280785698,
+        "decode_tokens_per_s": 69.66986865471712,
+        "generation_tokens_per_s": 9.80525162271929,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            356.34791711345315
+          ],
+          "decode": [
+            14.680394902825356,
+            14.678195118904114,
+            14.151912182569504,
+            14.28558025509119,
+            14.577907975763083,
+            13.875114731490612,
+            14.22474579885602
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.090576171875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.010705874317325
+      },
+      "client_e2e_latency_ms": 1637.5009859912097,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "343afab6-6a81-4fd4-9ff1-b947f8af902d",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 70.20517298951745,
+        "queue_wait": 1.0564560070633888,
+        "generation": 1521.7728638090193,
+        "total": 1593.4686386026442
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 0
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 360.3929807431996,
+        "request_ttft_ms": 431.68612057343125,
+        "prefill_latency_ms": 360.3929807431996,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5685.460343246887,
+        "decode_latency_ms": 100.47385096549988,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.353407280785698,
+        "decode_tokens_per_s": 69.66986865471712,
+        "generation_tokens_per_s": 5.257026321244739,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            360.3929807431996
+          ],
+          "decode": [
+            14.680394902825356,
+            14.678195118904114,
+            14.151912182569504,
+            14.28558025509119,
+            14.577907975763083,
+            13.875114731490612,
+            14.22474579885602
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.090576171875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.020494163609907
+      },
+      "client_e2e_latency_ms": 1616.6089167818427,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "d3e2f016-e6b5-41c9-b94c-3e737d8b5a24",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 84.05483793467283,
+        "queue_wait": 341.8416171334684,
+        "generation": 1158.448571804911,
+        "total": 1586.8634008802474
+      },
+      "engine": {
+        "queue_depth_at_submit": 0,
+        "requests_ahead_at_submit": 1
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 342.48334588482976,
+        "request_ttft_ms": 768.4092218987644,
+        "prefill_latency_ms": 342.48334588482976,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5982.772665065698,
+        "decode_latency_ms": 100.47385096549988,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.353407280785698,
+        "decode_tokens_per_s": 69.66986865471712,
+        "generation_tokens_per_s": 6.905787787830468,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            342.48334588482976
+          ],
+          "decode": [
+            14.680394902825356,
+            14.678195118904114,
+            14.151912182569504,
+            14.28558025509119,
+            14.577907975763083,
+            13.875114731490612,
+            14.22474579885602
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.090576171875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.041391713717973
+      },
+      "client_e2e_latency_ms": 1607.5727981515229,
+      "request_body_bytes": 2606695
+    },
+    {
+      "request_id": "bff0fbfb-301f-4891-8e06-ea624e761f55",
+      "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+      "text": "这张图片展示了一只可爱的小金",
+      "token_ids": [
+        108893,
+        45930,
+        101987,
+        99593,
+        91680,
+        102783,
+        104006,
+        34230
+      ],
+      "finish_reason": "length",
+      "usage": {
+        "input_tokens": 2049,
+        "image_tokens": 2025,
+        "image_grid_thw": [
+          [
+            1,
+            90,
+            90
+          ]
+        ],
+        "completion_tokens": 8,
+        "total_tokens": 2057
+      },
+      "latency_ms": {
+        "preprocess": 120.633773971349,
+        "queue_wait": 998.8750489428639,
+        "generation": 459.45513993501663,
+        "total": 1583.2265061326325
+      },
+      "engine": {
+        "queue_depth_at_submit": 2,
+        "requests_ahead_at_submit": 3
+      },
+      "profile": {
+        "measurement_mode": "cuda-synchronized-per-step-continuous-batching",
+        "engine_ttft_ms": 358.5750563070178,
+        "request_ttft_ms": 1478.1087711453438,
+        "prefill_latency_ms": 358.5750563070178,
+        "prefill_tokens": 2049,
+        "prefill_tokens_per_s": 5714.2848169718,
+        "decode_latency_ms": 100.47385096549988,
+        "decode_tokens": 7,
+        "decode_tpot_ms": 14.353407280785698,
+        "decode_tokens_per_s": 69.66986865471712,
+        "generation_tokens_per_s": 17.41192840095659,
+        "mean_prefill_batch_size": 1.0,
+        "mean_decode_batch_size": 4.0,
+        "max_decode_batch_size": 4,
+        "step_latencies_ms": {
+          "prefill": [
+            358.5750563070178
+          ],
+          "decode": [
+            14.680394902825356,
+            14.678195118904114,
+            14.151912182569504,
+            14.28558025509119,
+            14.577907975763083,
+            13.875114731490612,
+            14.22474579885602
+          ]
+        },
+        "batch_sizes": {
+          "prefill": [
+            1
+          ],
+          "decode": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "peak_allocated_gb": 8.495179653167725,
+        "peak_reserved_gb": 8.849609375,
+        "current_allocated_gb": 8.150866508483887,
+        "current_reserved_gb": 8.849609375,
+        "cuda_free_gb": 4.090576171875,
+        "cuda_total_gb": 15.43756103515625,
+        "server_tokens_per_s": 5.052972502046913
+      },
+      "client_e2e_latency_ms": 1605.943027883768,
+      "request_body_bytes": 2606695
+    }
+  ],
+  "summary": {
+    "client_e2e_latency_ms": {
+      "count": 12,
+      "mean": 1615.0577165729676,
+      "min": 1587.6858551055193,
+      "p50": 1612.103064544499,
+      "p90": 1636.8310493882746,
+      "max": 1641.869428101927
+    },
+    "server_total_latency_ms": {
+      "count": 12,
+      "mean": 1584.011448159193,
+      "min": 1560.0786982104182,
+      "p50": 1587.2321878559887,
+      "p90": 1596.5071427635849,
+      "max": 1596.8973939307034
+    },
+    "preprocess_latency_ms": {
+      "count": 12,
+      "mean": 97.1330787288025,
+      "min": 67.44438502937555,
+      "p50": 96.43845516256988,
+      "p90": 120.32781094312668,
+      "max": 123.26747737824917
+    },
+    "queue_wait_latency_ms": {
+      "count": 12,
+      "mean": 500.47637227301794,
+      "min": 1.0335850529372692,
+      "p50": 500.9340662509203,
+      "p90": 998.6182366497815,
+      "max": 1000.137273222208
+    },
+    "generation_latency_ms": {
+      "count": 12,
+      "mean": 983.635154630368,
+      "min": 441.0613002255559,
+      "p50": 986.3020351622254,
+      "p90": 1519.911506632343,
+      "max": 1525.0540957786143
+    },
+    "queue_depth_at_submit": {
+      "count": 12,
+      "mean": 0.75,
+      "min": 0,
+      "p50": 0.5,
+      "p90": 2.0,
+      "max": 2
+    },
+    "requests_ahead_at_submit": {
+      "count": 12,
+      "mean": 1.5,
+      "min": 0,
+      "p50": 1.5,
+      "p90": 3.0,
+      "max": 3
+    },
+    "request_ttft_ms": {
+      "count": 12,
+      "mean": 950.9593818026284,
+      "min": 419.6645109914243,
+      "p50": 955.6350510101765,
+      "p90": 1475.824659038335,
+      "max": 1481.6411500796676
+    },
+    "engine_ttft_ms": {
+      "count": 12,
+      "mean": 353.31970814149827,
+      "min": 341.3633881136775,
+      "p50": 357.7512993942946,
+      "p90": 360.2720793802291,
+      "max": 361.00385384634137
+    },
+    "prefill_latency_ms": {
+      "count": 12,
+      "mean": 353.31970814149827,
+      "min": 341.3633881136775,
+      "p50": 357.7512993942946,
+      "p90": 360.2720793802291,
+      "max": 361.00385384634137
+    },
+    "prefill_tokens_per_s": {
+      "count": 12,
+      "mean": 5802.03985498959,
+      "min": 5675.839684725753,
+      "p50": 5727.442880847293,
+      "p90": 5982.5582389176725,
+      "max": 6002.401169388622
+    },
+    "decode_latency_ms": {
+      "count": 12,
+      "mean": 100.20383230100076,
+      "min": 99.25965545699,
+      "p50": 100.47385096549988,
+      "p90": 100.87799048051238,
+      "max": 100.87799048051238
+    },
+    "decode_tpot_ms": {
+      "count": 12,
+      "mean": 14.314833185857252,
+      "min": 14.179950779570001,
+      "p50": 14.353407280785698,
+      "p90": 14.411141497216054,
+      "max": 14.411141497216054
+    },
+    "decode_tokens_per_s": {
+      "count": 12,
+      "mean": 69.8609103307633,
+      "min": 69.39075576998394,
+      "p50": 69.66986865471712,
+      "p90": 70.52210656758884,
+      "max": 70.52210656758884
+    },
+    "generation_tokens_per_s": {
+      "count": 12,
+      "mean": 9.940546608645095,
+      "min": 5.245715559955669,
+      "p50": 8.360695288778958,
+      "p90": 17.411811330760973,
+      "max": 18.138068327257123
+    },
+    "server_tokens_per_s": {
+      "count": 12,
+      "mean": 5.05078075820458,
+      "min": 5.00971448159753,
+      "p50": 5.04022063884897,
+      "p90": 5.110867019468648,
+      "max": 5.12794643576435
+    },
+    "mean_prefill_batch_size": {
+      "count": 12,
+      "mean": 1.0,
+      "min": 1.0,
+      "p50": 1.0,
+      "p90": 1.0,
+      "max": 1.0
+    },
+    "mean_decode_batch_size": {
+      "count": 12,
+      "mean": 4.0,
+      "min": 4.0,
+      "p50": 4.0,
+      "p90": 4.0,
+      "max": 4.0
+    },
+    "max_decode_batch_size": {
+      "count": 12,
+      "mean": 4.0,
+      "min": 4,
+      "p50": 4.0,
+      "p90": 4.0,
+      "max": 4
+    },
+    "peak_allocated_gb": {
+      "count": 12,
+      "mean": 8.495179653167725,
+      "min": 8.495179653167725,
+      "p50": 8.495179653167725,
+      "p90": 8.495179653167725,
+      "max": 8.495179653167725
+    },
+    "peak_reserved_gb": {
+      "count": 12,
+      "mean": 8.849609375,
+      "min": 8.849609375,
+      "p50": 8.849609375,
+      "p90": 8.849609375,
+      "max": 8.849609375
+    }
+  },
+  "benchmark": {
+    "requests": 12,
+    "completion_tokens": 96,
+    "elapsed_ms": 4916.462184861302,
+    "requests_per_s": 2.4407794769479203,
+    "output_tokens_per_s": 19.526235815583362
+  }
+}
