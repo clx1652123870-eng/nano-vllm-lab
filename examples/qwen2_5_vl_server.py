@@ -28,6 +28,7 @@ from nanovllm import (
     MultiModalPrompt,
     SamplingParams,
 )
+from nanovllm.attention import normalize_attention_backend_name
 
 
 class GenerateRequest(BaseModel):
@@ -108,6 +109,8 @@ class ServerConfig(BaseModel):
     gpu_memory_utilization: float
     max_concurrent_requests: int
     request_timeout_seconds: float
+    attention_backend: str = "flash_attn"
+    vision_attention_backend: str = "flash_attn"
 
 
 class ConcurrencyLimiter:
@@ -156,6 +159,19 @@ def parse_args():
     parser.add_argument("--max-num-seqs", type=int, default=4)
     parser.add_argument("--max-num-batched-tokens", type=int, default=4096)
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.72)
+    parser.add_argument("--attention-backend", default="flash_attn")
+    parser.add_argument(
+        "--vision-attention-backend",
+        choices=[
+            "flash_attn",
+            "torch_sdpa",
+            "torch_math",
+            "cudnn_sdpa",
+            "triton",
+            "hybrid",
+        ],
+        default="flash_attn",
+    )
     parser.add_argument("--max-concurrent-requests", type=int, default=16)
     parser.add_argument("--request-timeout-seconds", type=float, default=300.0)
     return parser.parse_args()
@@ -171,6 +187,10 @@ def setup_engine(args):
     processor = AutoProcessor.from_pretrained(args.model)
     processor_load_ms = elapsed_ms(t0)
 
+    attention_backend = normalize_attention_backend_name(args.attention_backend)
+    vision_attention_backend = normalize_attention_backend_name(
+        args.vision_attention_backend
+    )
     engine = AsyncLLMEngine(
         args.model,
         enforce_eager=True,
@@ -179,6 +199,8 @@ def setup_engine(args):
         max_num_seqs=args.max_num_seqs,
         max_num_batched_tokens=args.max_num_batched_tokens,
         gpu_memory_utilization=args.gpu_memory_utilization,
+        attention_backend=attention_backend,
+        vision_attention_backend=vision_attention_backend,
     )
 
     served_model_name = args.served_model_name or Path(args.model).name
@@ -195,6 +217,8 @@ def setup_engine(args):
         gpu_memory_utilization=args.gpu_memory_utilization,
         max_concurrent_requests=args.max_concurrent_requests,
         request_timeout_seconds=args.request_timeout_seconds,
+        attention_backend=attention_backend,
+        vision_attention_backend=vision_attention_backend,
     )
     app.state.startup = {
         "processor_load_ms": processor_load_ms,

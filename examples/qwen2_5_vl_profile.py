@@ -28,6 +28,19 @@ def parse_args():
     parser.add_argument("--max-model-len", type=int, default=4096)
     parser.add_argument("--max-num-batched-tokens", type=int, default=4096)
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.72)
+    parser.add_argument("--attention-backend", default="flash_attn")
+    parser.add_argument(
+        "--vision-attention-backend",
+        choices=[
+            "flash_attn",
+            "torch_sdpa",
+            "torch_math",
+            "cudnn_sdpa",
+            "triton",
+            "hybrid",
+        ],
+        default="flash_attn",
+    )
     parser.add_argument("--output-json")
     parser.add_argument("--print-text", action="store_true")
     return parser.parse_args()
@@ -74,6 +87,8 @@ def create_llm(args):
         max_num_seqs=1,
         max_num_batched_tokens=args.max_num_batched_tokens,
         gpu_memory_utilization=args.gpu_memory_utilization,
+        attention_backend=args.attention_backend,
+        vision_attention_backend=args.vision_attention_backend,
     )
     sync_cuda()
     return llm, elapsed_ms(t0)
@@ -275,10 +290,35 @@ def main():
     print(json.dumps(prompt_info, ensure_ascii=False, indent=2))
 
     llm, engine_init_ms = create_llm(args)
+    model_parameter_gb = bytes_to_gb(
+        sum(
+            parameter.numel() * parameter.element_size()
+            for parameter in llm.model_runner.model.parameters()
+        )
+    )
+    unique_storages = {}
+    for parameter in llm.model_runner.model.parameters():
+        storage = parameter.untyped_storage()
+        unique_storages[storage.data_ptr()] = storage.nbytes()
+    model_unique_storage_gb = bytes_to_gb(sum(unique_storages.values()))
+    kv_cache_gb = bytes_to_gb(
+        llm.model_runner.kv_cache.numel()
+        * llm.model_runner.kv_cache.element_size()
+    )
     print("\n[setup]")
     print(f"processor_load_ms: {preprocess_times['processor_load_ms']:.2f}")
     print(f"request_preprocess_ms: {preprocess_times['request_preprocess_ms']:.2f}")
     print(f"engine_init_ms: {engine_init_ms:.2f}")
+    print(f"attention_backend: {llm.config.attention_backend}")
+    print(f"vision_attention_backend: {llm.config.vision_attention_backend}")
+    print(
+        "quantization_config: "
+        f"{getattr(llm.config.hf_config, 'quantization_config', None)}"
+    )
+    print(f"model_parameter_gb: {model_parameter_gb:.2f}")
+    print(f"model_unique_storage_gb: {model_unique_storage_gb:.2f}")
+    print(f"kv_cache_gb: {kv_cache_gb:.2f}")
+    print(f"num_kvcache_blocks: {llm.config.num_kvcache_blocks}")
     print(f"current_allocated_gb: {bytes_to_gb(torch.cuda.memory_allocated()):.2f}")
     print(f"current_reserved_gb: {bytes_to_gb(torch.cuda.memory_reserved()):.2f}")
 
@@ -315,11 +355,22 @@ def main():
             "max_model_len": args.max_model_len,
             "max_num_batched_tokens": args.max_num_batched_tokens,
             "gpu_memory_utilization": args.gpu_memory_utilization,
+            "attention_backend": llm.config.attention_backend,
+            "vision_attention_backend": llm.config.vision_attention_backend,
+            "quantization_config": getattr(
+                llm.config.hf_config,
+                "quantization_config",
+                None,
+            ),
         },
         "prompt": prompt_info,
         "setup": {
             **preprocess_times,
             "engine_init_ms": engine_init_ms,
+            "model_parameter_gb": model_parameter_gb,
+            "model_unique_storage_gb": model_unique_storage_gb,
+            "kv_cache_gb": kv_cache_gb,
+            "num_kvcache_blocks": llm.config.num_kvcache_blocks,
         },
         "warmups": warmups,
         "measurements": measurements,

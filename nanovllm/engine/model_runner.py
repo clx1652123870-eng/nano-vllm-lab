@@ -35,7 +35,11 @@ class ModelRunner:
         try:
             torch.set_default_dtype(hf_config.dtype or text_config.dtype)
             torch.set_default_device("cuda")
-            self.model = get_model_class(hf_config)(hf_config)
+            self.model = get_model_class(hf_config)(
+                hf_config,
+                attention_backend=config.attention_backend,
+                vision_attention_backend=config.vision_attention_backend,
+            )
             load_model(self.model, config.model)
             self.sampler = Sampler()
             self.warmup_model()

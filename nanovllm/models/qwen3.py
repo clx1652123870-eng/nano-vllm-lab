@@ -24,6 +24,7 @@ class Qwen3Attention(nn.Module):
         qkv_bias: bool = False,
         rope_theta: float = 10000,
         rope_scaling: dict | None = None,
+        attention_backend: str = "flash_attn",
     ) -> None:
         super().__init__()
         tp_size = dist.get_world_size()
@@ -64,6 +65,7 @@ class Qwen3Attention(nn.Module):
             self.head_dim,
             self.scaling,
             self.num_kv_heads,
+            backend=attention_backend,
         )
         if not self.qkv_bias:
             self.q_norm = RMSNorm(self.head_dim, eps=rms_norm_eps)
@@ -122,6 +124,7 @@ class Qwen3DecoderLayer(nn.Module):
     def __init__(
         self,
         config: Qwen3Config,
+        attention_backend: str = "flash_attn",
     ) -> None:
         super().__init__()
         self.self_attn = Qwen3Attention(
@@ -134,6 +137,7 @@ class Qwen3DecoderLayer(nn.Module):
             head_dim=getattr(config, 'head_dim', None),
             rope_theta=getattr(config, "rope_theta", 1000000),
             rope_scaling=getattr(config, "rope_scaling", None),
+            attention_backend=attention_backend,
         )
         self.mlp = Qwen3MLP(
             hidden_size=config.hidden_size,
@@ -164,10 +168,14 @@ class Qwen3Model(nn.Module):
     def __init__(
         self,
         config: Qwen3Config,
+        attention_backend: str = "flash_attn",
     ) -> None:
         super().__init__()
         self.embed_tokens = VocabParallelEmbedding(config.vocab_size, config.hidden_size)
-        self.layers = nn.ModuleList([Qwen3DecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList(
+            Qwen3DecoderLayer(config, attention_backend)
+            for _ in range(config.num_hidden_layers)
+        )
         self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
@@ -194,10 +202,14 @@ class Qwen3ForCausalLM(nn.Module):
 
     def __init__(
         self,
-        config: Qwen3Config
+        config: Qwen3Config,
+        attention_backend: str = "flash_attn",
+        vision_attention_backend: str | None = None,
     ) -> None:
         super().__init__()
-        self.model = Qwen3Model(config)
+        del vision_attention_backend
+        self.attention_backend = attention_backend
+        self.model = Qwen3Model(config, attention_backend)
         self.lm_head = ParallelLMHead(config.vocab_size, config.hidden_size)
         if config.tie_word_embeddings:
             self.lm_head.weight.data = self.model.embed_tokens.weight.data

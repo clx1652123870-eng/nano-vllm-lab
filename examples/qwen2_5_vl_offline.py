@@ -22,6 +22,19 @@ def parse_args():
     parser.add_argument("--max-model-len", type=int, default=1024)
     parser.add_argument("--max-num-batched-tokens", type=int, default=1024)
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.8)
+    parser.add_argument("--attention-backend", default="flash_attn")
+    parser.add_argument(
+        "--vision-attention-backend",
+        choices=[
+            "flash_attn",
+            "torch_sdpa",
+            "torch_math",
+            "cudnn_sdpa",
+            "triton",
+            "hybrid",
+        ],
+        default="flash_attn",
+    )
     parser.add_argument("--no-tqdm", action="store_true")
     return parser.parse_args()
 
@@ -57,6 +70,8 @@ def run_nano(args, prompt: MultiModalPrompt):
         max_num_seqs=1,
         max_num_batched_tokens=args.max_num_batched_tokens,
         gpu_memory_utilization=args.gpu_memory_utilization,
+        attention_backend=args.attention_backend,
+        vision_attention_backend=args.vision_attention_backend,
     )
     sampling_params = SamplingParams(
         temperature=args.temperature,

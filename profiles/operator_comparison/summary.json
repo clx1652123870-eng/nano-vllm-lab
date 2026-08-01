@@ -1,0 +1,994 @@
+{
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "torch": "2.11.0+cu130",
+    "cuda": "13.0"
+  },
+  "workload": {
+    "input_tokens": 2049,
+    "image_tokens": 2025,
+    "image_grid_thw": [
+      [
+        1,
+        90,
+        90
+      ]
+    ],
+    "pixel_values_shape": [
+      8100,
+      1176
+    ],
+    "image": "assets/dog.png",
+    "output_tokens": 32,
+    "decode_tokens": 31,
+    "dtype": "torch.bfloat16",
+    "enforce_eager": true,
+    "tensor_parallel_size": 1
+  },
+  "correctness": {
+    "matching_greedy_prefix_tokens": 21,
+    "nano_token_ids": [
+      108893,
+      45930,
+      101987,
+      99593,
+      91680,
+      102783,
+      104006,
+      34230,
+      99676,
+      100503,
+      105329,
+      1773,
+      100503,
+      105329,
+      9370,
+      99676,
+      38035,
+      20412,
+      104362,
+      108979,
+      3837,
+      99676,
+      28291,
+      109278,
+      101761,
+      100180,
+      3837,
+      104392,
+      99491,
+      99722,
+      33108,
+      109739
+    ],
+    "vllm_token_ids": [
+      108893,
+      45930,
+      101987,
+      99593,
+      91680,
+      102783,
+      104006,
+      34230,
+      99676,
+      100503,
+      105329,
+      1773,
+      100503,
+      105329,
+      9370,
+      99676,
+      38035,
+      20412,
+      104362,
+      108979,
+      3837,
+      104171,
+      26288,
+      68536,
+      108575,
+      3837,
+      104392,
+      99491,
+      109739,
+      33108,
+      102962,
+      1773
+    ],
+    "nano_text": "这张图片展示了一只可爱的小金毛幼犬。幼犬的毛色是浅金色，毛发柔软蓬松，显得非常健康和活泼",
+    "vllm_text": "这张图片展示了一只可爱的小金毛幼犬。幼犬的毛色是浅金色，眼睛大而明亮，显得非常活泼和好奇。"
+  },
+  "phases": {
+    "nano": {
+      "prefill_o1": {
+        "cuda_kernel_time_ms": 354.41834450000033,
+        "kernel_launches": 2534.0,
+        "steady_wall_latency_ms": 367.08063166588545,
+        "categories": {
+          "gemm": {
+            "cuda_time_ms": 229.63168199999953,
+            "launches": 307.0
+          },
+          "elementwise_layout": {
+            "cuda_time_ms": 78.80642400000018,
+            "launches": 1691.0
+          },
+          "attention": {
+            "cuda_time_ms": 29.851349000000003,
+            "launches": 68.0
+          },
+          "activation": {
+            "cuda_time_ms": 8.273812499999782,
+            "launches": 69.0
+          },
+          "convolution": {
+            "cuda_time_ms": 2.8701129999999977,
+            "launches": 3.0
+          },
+          "memory": {
+            "cuda_time_ms": 2.406818000000056,
+            "launches": 101.0
+          },
+          "normalization": {
+            "cuda_time_ms": 1.3907720000004429,
+            "launches": 138.0
+          },
+          "reduction": {
+            "cuda_time_ms": 0.9483485000001656,
+            "launches": 105.0
+          },
+          "kv_cache": {
+            "cuda_time_ms": 0.1157295000001468,
+            "launches": 36.0
+          },
+          "sampling": {
+            "cuda_time_ms": 0.0896480000000156,
+            "launches": 2.0
+          },
+          "other": {
+            "cuda_time_ms": 0.03364800000000469,
+            "launches": 14.0
+          }
+        }
+      },
+      "total_o32": {
+        "cuda_kernel_time_ms": 623.6462609999764,
+        "kernel_launches": 35425.0,
+        "steady_wall_latency_ms": 826.5184932388365,
+        "categories": {
+          "gemm": {
+            "cuda_time_ms": 447.8859974999968,
+            "launches": 4802.0
+          },
+          "elementwise_layout": {
+            "cuda_time_ms": 108.32144099999282,
+            "launches": 23019.0
+          },
+          "attention": {
+            "cuda_time_ms": 42.797057499994494,
+            "launches": 2300.0
+          },
+          "activation": {
+            "cuda_time_ms": 9.576873499997548,
+            "launches": 1185.0
+          },
+          "normalization": {
+            "cuda_time_ms": 4.458097999998286,
+            "launches": 2401.0
+          },
+          "sampling": {
+            "cuda_time_ms": 2.8775405000001193,
+            "launches": 64.0
+          },
+          "convolution": {
+            "cuda_time_ms": 2.7761460000000078,
+            "launches": 3.0
+          },
+          "memory": {
+            "cuda_time_ms": 2.2454250000002065,
+            "launches": 318.0
+          },
+          "reduction": {
+            "cuda_time_ms": 1.521024999999301,
+            "launches": 167.0
+          },
+          "kv_cache": {
+            "cuda_time_ms": 1.1532014999968379,
+            "launches": 1152.0
+          },
+          "other": {
+            "cuda_time_ms": 0.03345549999992363,
+            "launches": 14.0
+          }
+        }
+      },
+      "decode_per_token": {
+        "cuda_kernel_time_ms": 8.68477149999923,
+        "kernel_launches": 1061.0,
+        "steady_wall_latency_ms": 14.820576179772615,
+        "estimated_cpu_and_launch_gap_ms": 6.135804679773386,
+        "categories": {
+          "activation": {
+            "cuda_time_ms": 0.04203422580637957,
+            "launches": 36.0
+          },
+          "attention": {
+            "cuda_time_ms": 0.4176034999998223,
+            "launches": 72.0
+          },
+          "convolution": {
+            "cuda_time_ms": -0.0030311935483867715,
+            "launches": 0.0
+          },
+          "elementwise_layout": {
+            "cuda_time_ms": 0.9520973225804077,
+            "launches": 688.0
+          },
+          "gemm": {
+            "cuda_time_ms": 7.040461790322492,
+            "launches": 145.0
+          },
+          "kv_cache": {
+            "cuda_time_ms": 0.03346683870957068,
+            "launches": 36.0
+          },
+          "memory": {
+            "cuda_time_ms": -0.005206225806446753,
+            "launches": 7.0
+          },
+          "normalization": {
+            "cuda_time_ms": 0.09894599999993044,
+            "launches": 73.0
+          },
+          "other": {
+            "cuda_time_ms": -6.209677421969625e-06,
+            "launches": 0.0
+          },
+          "reduction": {
+            "cuda_time_ms": 0.01847343548384308,
+            "launches": 2.0
+          },
+          "sampling": {
+            "cuda_time_ms": 0.0899320161290356,
+            "launches": 2.0
+          }
+        },
+        "derivation": "(O32 profile - O1 profile) / 31 decode tokens"
+      }
+    },
+    "vllm": {
+      "prefill_o1": {
+        "cuda_kernel_time_ms": 284.2370179999997,
+        "kernel_launches": 978.0,
+        "steady_wall_latency_ms": 307.62774404138327,
+        "categories": {
+          "gemm": {
+            "cuda_time_ms": 225.49058150000027,
+            "launches": 276.0
+          },
+          "attention": {
+            "cuda_time_ms": 29.367631999999777,
+            "launches": 68.0
+          },
+          "activation": {
+            "cuda_time_ms": 16.567826499999853,
+            "launches": 69.0
+          },
+          "elementwise_layout": {
+            "cuda_time_ms": 5.829111499999443,
+            "launches": 260.0
+          },
+          "rotary_embedding": {
+            "cuda_time_ms": 3.0022280000002755,
+            "launches": 68.0
+          },
+          "normalization": {
+            "cuda_time_ms": 2.951955999999973,
+            "launches": 138.0
+          },
+          "memory": {
+            "cuda_time_ms": 0.7812959999999439,
+            "launches": 61.0
+          },
+          "kv_cache": {
+            "cuda_time_ms": 0.23773000000021421,
+            "launches": 36.0
+          },
+          "sampling": {
+            "cuda_time_ms": 0.004736499999999069,
+            "launches": 1.0
+          },
+          "other": {
+            "cuda_time_ms": 0.003920000000012806,
+            "launches": 1.0
+          }
+        }
+      },
+      "total_o32": {
+        "cuda_kernel_time_ms": 537.9651855000016,
+        "kernel_launches": 18679.0,
+        "steady_wall_latency_ms": 598.5203422605991,
+        "categories": {
+          "gemm": {
+            "cuda_time_ms": 449.296461500003,
+            "launches": 4771.0
+          },
+          "attention": {
+            "cuda_time_ms": 42.4299660000009,
+            "launches": 2300.0
+          },
+          "activation": {
+            "cuda_time_ms": 18.90989999999893,
+            "launches": 1185.0
+          },
+          "elementwise_layout": {
+            "cuda_time_ms": 12.259653999999475,
+            "launches": 4011.0
+          },
+          "normalization": {
+            "cuda_time_ms": 7.091370500002627,
+            "launches": 2401.0
+          },
+          "rotary_embedding": {
+            "cuda_time_ms": 3.9475889999996943,
+            "launches": 1184.0
+          },
+          "memory": {
+            "cuda_time_ms": 1.9133184999973674,
+            "launches": 1611.0
+          },
+          "kv_cache": {
+            "cuda_time_ms": 1.902206499999462,
+            "launches": 1152.0
+          },
+          "sampling": {
+            "cuda_time_ms": 0.14881599999999162,
+            "launches": 32.0
+          },
+          "other": {
+            "cuda_time_ms": 0.06590350000012041,
+            "launches": 32.0
+          }
+        }
+      },
+      "decode_per_token": {
+        "cuda_kernel_time_ms": 8.184779596774254,
+        "kernel_launches": 571.0,
+        "steady_wall_latency_ms": 9.383632200619866,
+        "estimated_cpu_and_launch_gap_ms": 1.1988526038456122,
+        "categories": {
+          "activation": {
+            "cuda_time_ms": 0.07555075806448638,
+            "launches": 36.0
+          },
+          "attention": {
+            "cuda_time_ms": 0.42136561290326213,
+            "launches": 72.0
+          },
+          "elementwise_layout": {
+            "cuda_time_ms": 0.20743685483871072,
+            "launches": 121.0
+          },
+          "gemm": {
+            "cuda_time_ms": 7.21954451612912,
+            "launches": 145.0
+          },
+          "kv_cache": {
+            "cuda_time_ms": 0.053692790322556375,
+            "launches": 36.0
+          },
+          "memory": {
+            "cuda_time_ms": 0.036516854838626565,
+            "launches": 50.0
+          },
+          "normalization": {
+            "cuda_time_ms": 0.13352950000008565,
+            "launches": 73.0
+          },
+          "other": {
+            "cuda_time_ms": 0.001999467741938955,
+            "launches": 1.0
+          },
+          "rotary_embedding": {
+            "cuda_time_ms": 0.03049551612901351,
+            "launches": 36.0
+          },
+          "sampling": {
+            "cuda_time_ms": 0.004647725806451373,
+            "launches": 1.0
+          }
+        },
+        "derivation": "(O32 profile - O1 profile) / 31 decode tokens"
+      }
+    }
+  },
+  "comparison": {
+    "prefill_o1": {
+      "cuda_kernel_time_ms": {
+        "nano": 354.41834450000033,
+        "vllm": 284.2370179999997,
+        "nano_over_vllm": 1.2469112819780592,
+        "nano_delta_percent": 24.691128197805924
+      },
+      "kernel_launches": {
+        "nano": 2534.0,
+        "vllm": 978.0,
+        "nano_over_vllm": 2.591002044989775,
+        "nano_delta_percent": 159.10020449897752
+      },
+      "steady_wall_latency_ms": {
+        "nano": 367.08063166588545,
+        "vllm": 307.62774404138327,
+        "nano_over_vllm": 1.193262437397403,
+        "nano_delta_percent": 19.3262437397403
+      },
+      "categories": {
+        "activation": {
+          "cuda_time_ms": {
+            "nano": 8.273812499999782,
+            "vllm": 16.567826499999853,
+            "nano_over_vllm": 0.49939033946304634,
+            "nano_delta_percent": -50.06096605369537
+          },
+          "launches": {
+            "nano": 69.0,
+            "vllm": 69.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "attention": {
+          "cuda_time_ms": {
+            "nano": 29.851349000000003,
+            "vllm": 29.367631999999777,
+            "nano_over_vllm": 1.0164710930728167,
+            "nano_delta_percent": 1.647109307281669
+          },
+          "launches": {
+            "nano": 68.0,
+            "vllm": 68.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "convolution": {
+          "cuda_time_ms": {
+            "nano": 2.8701129999999977,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          },
+          "launches": {
+            "nano": 3.0,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          }
+        },
+        "elementwise_layout": {
+          "cuda_time_ms": {
+            "nano": 78.80642400000018,
+            "vllm": 5.829111499999443,
+            "nano_over_vllm": 13.5194572963663,
+            "nano_delta_percent": 1251.94572963663
+          },
+          "launches": {
+            "nano": 1691.0,
+            "vllm": 260.0,
+            "nano_over_vllm": 6.503846153846154,
+            "nano_delta_percent": 550.3846153846154
+          }
+        },
+        "gemm": {
+          "cuda_time_ms": {
+            "nano": 229.63168199999953,
+            "vllm": 225.49058150000027,
+            "nano_over_vllm": 1.0183648490879396,
+            "nano_delta_percent": 1.836484908793956
+          },
+          "launches": {
+            "nano": 307.0,
+            "vllm": 276.0,
+            "nano_over_vllm": 1.1123188405797102,
+            "nano_delta_percent": 11.231884057971019
+          }
+        },
+        "kv_cache": {
+          "cuda_time_ms": {
+            "nano": 0.1157295000001468,
+            "vllm": 0.23773000000021421,
+            "nano_over_vllm": 0.4868106675642221,
+            "nano_delta_percent": -51.31893324357779
+          },
+          "launches": {
+            "nano": 36.0,
+            "vllm": 36.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "memory": {
+          "cuda_time_ms": {
+            "nano": 2.406818000000056,
+            "vllm": 0.7812959999999439,
+            "nano_over_vllm": 3.0805456574719807,
+            "nano_delta_percent": 208.05456574719807
+          },
+          "launches": {
+            "nano": 101.0,
+            "vllm": 61.0,
+            "nano_over_vllm": 1.6557377049180328,
+            "nano_delta_percent": 65.57377049180329
+          }
+        },
+        "normalization": {
+          "cuda_time_ms": {
+            "nano": 1.3907720000004429,
+            "vllm": 2.951955999999973,
+            "nano_over_vllm": 0.4711357486359741,
+            "nano_delta_percent": -52.88642513640258
+          },
+          "launches": {
+            "nano": 138.0,
+            "vllm": 138.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "other": {
+          "cuda_time_ms": {
+            "nano": 0.03364800000000469,
+            "vllm": 0.003920000000012806,
+            "nano_over_vllm": 8.58367346936091,
+            "nano_delta_percent": 758.367346936091
+          },
+          "launches": {
+            "nano": 14.0,
+            "vllm": 1.0,
+            "nano_over_vllm": 14.0,
+            "nano_delta_percent": 1300.0
+          }
+        },
+        "reduction": {
+          "cuda_time_ms": {
+            "nano": 0.9483485000001656,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          },
+          "launches": {
+            "nano": 105.0,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          }
+        },
+        "rotary_embedding": {
+          "cuda_time_ms": {
+            "nano": 0.0,
+            "vllm": 3.0022280000002755,
+            "nano_over_vllm": 0.0,
+            "nano_delta_percent": -100.0
+          },
+          "launches": {
+            "nano": 0.0,
+            "vllm": 68.0,
+            "nano_over_vllm": 0.0,
+            "nano_delta_percent": -100.0
+          }
+        },
+        "sampling": {
+          "cuda_time_ms": {
+            "nano": 0.0896480000000156,
+            "vllm": 0.004736499999999069,
+            "nano_over_vllm": 18.927055842929004,
+            "nano_delta_percent": 1792.7055842929003
+          },
+          "launches": {
+            "nano": 2.0,
+            "vllm": 1.0,
+            "nano_over_vllm": 2.0,
+            "nano_delta_percent": 100.0
+          }
+        }
+      }
+    },
+    "total_o32": {
+      "cuda_kernel_time_ms": {
+        "nano": 623.6462609999764,
+        "vllm": 537.9651855000016,
+        "nano_over_vllm": 1.1592688110854985,
+        "nano_delta_percent": 15.92688110854985
+      },
+      "kernel_launches": {
+        "nano": 35425.0,
+        "vllm": 18679.0,
+        "nano_over_vllm": 1.8965148027196317,
+        "nano_delta_percent": 89.65148027196317
+      },
+      "steady_wall_latency_ms": {
+        "nano": 826.5184932388365,
+        "vllm": 598.5203422605991,
+        "nano_over_vllm": 1.38093634397971,
+        "nano_delta_percent": 38.093634397971
+      },
+      "categories": {
+        "activation": {
+          "cuda_time_ms": {
+            "nano": 9.576873499997548,
+            "vllm": 18.90989999999893,
+            "nano_over_vllm": 0.5064476015207955,
+            "nano_delta_percent": -49.35523984792045
+          },
+          "launches": {
+            "nano": 1185.0,
+            "vllm": 1185.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "attention": {
+          "cuda_time_ms": {
+            "nano": 42.797057499994494,
+            "vllm": 42.4299660000009,
+            "nano_over_vllm": 1.0086517038451923,
+            "nano_delta_percent": 0.8651703845192316
+          },
+          "launches": {
+            "nano": 2300.0,
+            "vllm": 2300.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "convolution": {
+          "cuda_time_ms": {
+            "nano": 2.7761460000000078,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          },
+          "launches": {
+            "nano": 3.0,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          }
+        },
+        "elementwise_layout": {
+          "cuda_time_ms": {
+            "nano": 108.32144099999282,
+            "vllm": 12.259653999999475,
+            "nano_over_vllm": 8.835603435463794,
+            "nano_delta_percent": 783.5603435463794
+          },
+          "launches": {
+            "nano": 23019.0,
+            "vllm": 4011.0,
+            "nano_over_vllm": 5.738967838444278,
+            "nano_delta_percent": 473.89678384442783
+          }
+        },
+        "gemm": {
+          "cuda_time_ms": {
+            "nano": 447.8859974999968,
+            "vllm": 449.296461500003,
+            "nano_over_vllm": 0.9968607275577082,
+            "nano_delta_percent": -0.31392724422918405
+          },
+          "launches": {
+            "nano": 4802.0,
+            "vllm": 4771.0,
+            "nano_over_vllm": 1.0064975896038566,
+            "nano_delta_percent": 0.6497589603856602
+          }
+        },
+        "kv_cache": {
+          "cuda_time_ms": {
+            "nano": 1.1532014999968379,
+            "vllm": 1.902206499999462,
+            "nano_over_vllm": 0.6062441170278643,
+            "nano_delta_percent": -39.37558829721357
+          },
+          "launches": {
+            "nano": 1152.0,
+            "vllm": 1152.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "memory": {
+          "cuda_time_ms": {
+            "nano": 2.2454250000002065,
+            "vllm": 1.9133184999973674,
+            "nano_over_vllm": 1.1735761714546198,
+            "nano_delta_percent": 17.35761714546198
+          },
+          "launches": {
+            "nano": 318.0,
+            "vllm": 1611.0,
+            "nano_over_vllm": 0.1973929236499069,
+            "nano_delta_percent": -80.26070763500931
+          }
+        },
+        "normalization": {
+          "cuda_time_ms": {
+            "nano": 4.458097999998286,
+            "vllm": 7.091370500002627,
+            "nano_over_vllm": 0.6286652206363544,
+            "nano_delta_percent": -37.13347793636456
+          },
+          "launches": {
+            "nano": 2401.0,
+            "vllm": 2401.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "other": {
+          "cuda_time_ms": {
+            "nano": 0.03345549999992363,
+            "vllm": 0.06590350000012041,
+            "nano_over_vllm": 0.5076437518472086,
+            "nano_delta_percent": -49.235624815279145
+          },
+          "launches": {
+            "nano": 14.0,
+            "vllm": 32.0,
+            "nano_over_vllm": 0.4375,
+            "nano_delta_percent": -56.25
+          }
+        },
+        "reduction": {
+          "cuda_time_ms": {
+            "nano": 1.521024999999301,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          },
+          "launches": {
+            "nano": 167.0,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          }
+        },
+        "rotary_embedding": {
+          "cuda_time_ms": {
+            "nano": 0.0,
+            "vllm": 3.9475889999996943,
+            "nano_over_vllm": 0.0,
+            "nano_delta_percent": -100.0
+          },
+          "launches": {
+            "nano": 0.0,
+            "vllm": 1184.0,
+            "nano_over_vllm": 0.0,
+            "nano_delta_percent": -100.0
+          }
+        },
+        "sampling": {
+          "cuda_time_ms": {
+            "nano": 2.8775405000001193,
+            "vllm": 0.14881599999999162,
+            "nano_over_vllm": 19.336230647244122,
+            "nano_delta_percent": 1833.6230647244122
+          },
+          "launches": {
+            "nano": 64.0,
+            "vllm": 32.0,
+            "nano_over_vllm": 2.0,
+            "nano_delta_percent": 100.0
+          }
+        }
+      }
+    },
+    "decode_per_token": {
+      "cuda_kernel_time_ms": {
+        "nano": 8.68477149999923,
+        "vllm": 8.184779596774254,
+        "nano_over_vllm": 1.0610880106560268,
+        "nano_delta_percent": 6.108801065602676
+      },
+      "kernel_launches": {
+        "nano": 1061.0,
+        "vllm": 571.0,
+        "nano_over_vllm": 1.8581436077057794,
+        "nano_delta_percent": 85.81436077057793
+      },
+      "steady_wall_latency_ms": {
+        "nano": 14.820576179772615,
+        "vllm": 9.383632200619866,
+        "nano_over_vllm": 1.5794071914704408,
+        "nano_delta_percent": 57.940719147044085
+      },
+      "categories": {
+        "activation": {
+          "cuda_time_ms": {
+            "nano": 0.04203422580637957,
+            "vllm": 0.07555075806448638,
+            "nano_over_vllm": 0.5563706689812594,
+            "nano_delta_percent": -44.362933101874056
+          },
+          "launches": {
+            "nano": 36.0,
+            "vllm": 36.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "attention": {
+          "cuda_time_ms": {
+            "nano": 0.4176034999998223,
+            "vllm": 0.42136561290326213,
+            "nano_over_vllm": 0.9910716185938421,
+            "nano_delta_percent": -0.8928381406157926
+          },
+          "launches": {
+            "nano": 72.0,
+            "vllm": 72.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "convolution": {
+          "cuda_time_ms": {
+            "nano": -0.0030311935483867715,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          },
+          "launches": {
+            "nano": 0.0,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          }
+        },
+        "elementwise_layout": {
+          "cuda_time_ms": {
+            "nano": 0.9520973225804077,
+            "vllm": 0.20743685483871072,
+            "nano_over_vllm": 4.589817577598234,
+            "nano_delta_percent": 358.98175775982344
+          },
+          "launches": {
+            "nano": 688.0,
+            "vllm": 121.0,
+            "nano_over_vllm": 5.68595041322314,
+            "nano_delta_percent": 468.59504132231405
+          }
+        },
+        "gemm": {
+          "cuda_time_ms": {
+            "nano": 7.040461790322492,
+            "vllm": 7.21954451612912,
+            "nano_over_vllm": 0.9751947334895519,
+            "nano_delta_percent": -2.480526651044812
+          },
+          "launches": {
+            "nano": 145.0,
+            "vllm": 145.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "kv_cache": {
+          "cuda_time_ms": {
+            "nano": 0.03346683870957068,
+            "vllm": 0.053692790322556375,
+            "nano_over_vllm": 0.62330228152645,
+            "nano_delta_percent": -37.66977184735501
+          },
+          "launches": {
+            "nano": 36.0,
+            "vllm": 36.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "memory": {
+          "cuda_time_ms": {
+            "nano": -0.005206225806446753,
+            "vllm": 0.036516854838626565,
+            "nano_over_vllm": -0.14257048777759865,
+            "nano_delta_percent": -114.25704877775986
+          },
+          "launches": {
+            "nano": 7.0,
+            "vllm": 50.0,
+            "nano_over_vllm": 0.14,
+            "nano_delta_percent": -86.0
+          }
+        },
+        "normalization": {
+          "cuda_time_ms": {
+            "nano": 0.09894599999993044,
+            "vllm": 0.13352950000008565,
+            "nano_over_vllm": 0.7410047966918694,
+            "nano_delta_percent": -25.899520330813065
+          },
+          "launches": {
+            "nano": 73.0,
+            "vllm": 73.0,
+            "nano_over_vllm": 1.0,
+            "nano_delta_percent": 0.0
+          }
+        },
+        "other": {
+          "cuda_time_ms": {
+            "nano": -6.209677421969625e-06,
+            "vllm": 0.001999467741938955,
+            "nano_over_vllm": -0.0031056652186585813,
+            "nano_delta_percent": -100.31056652186585
+          },
+          "launches": {
+            "nano": 0.0,
+            "vllm": 1.0,
+            "nano_over_vllm": 0.0,
+            "nano_delta_percent": -100.0
+          }
+        },
+        "reduction": {
+          "cuda_time_ms": {
+            "nano": 0.01847343548384308,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          },
+          "launches": {
+            "nano": 2.0,
+            "vllm": 0.0,
+            "nano_over_vllm": null,
+            "nano_delta_percent": null
+          }
+        },
+        "rotary_embedding": {
+          "cuda_time_ms": {
+            "nano": 0.0,
+            "vllm": 0.03049551612901351,
+            "nano_over_vllm": 0.0,
+            "nano_delta_percent": -100.0
+          },
+          "launches": {
+            "nano": 0.0,
+            "vllm": 36.0,
+            "nano_over_vllm": 0.0,
+            "nano_delta_percent": -100.0
+          }
+        },
+        "sampling": {
+          "cuda_time_ms": {
+            "nano": 0.0899320161290356,
+            "vllm": 0.004647725806451373,
+            "nano_over_vllm": 19.34968194642713,
+            "nano_delta_percent": 1834.968194642713
+          },
+          "launches": {
+            "nano": 2.0,
+            "vllm": 1.0,
+            "nano_over_vllm": 2.0,
+            "nano_delta_percent": 100.0
+          }
+        }
+      },
+      "estimated_cpu_and_launch_gap_ms": {
+        "nano": 6.135804679773386,
+        "vllm": 1.1988526038456122,
+        "nano_over_vllm": 5.118064272531332,
+        "nano_delta_percent": 411.8064272531332
+      },
+      "derivation": "(O32 profile - O1 profile) / 31 decode tokens"
+    }
+  },
+  "methodology_notes": [
+    "O1 contains multimodal prefill, first-token sampling, and no decode step.",
+    "Decode per-token values are derived from separate O32 and O1 profiles.",
+    "PIL and processor work is outside the profile; vision encoder forward is inside.",
+    "CUDA times are sums of raw Kineto CUDA kernel events; overlapping kernels would be double-counted.",
+    "Operator categories are heuristic classifications based on CUDA kernel names.",
+    "Profiled wall time contains Kineto overhead and is not used as production latency.",
+    "steady_wall_latency_ms uses the fastest post-initialization warmup from each process and is indicative only.",
+    "vLLM V1 multiprocessing is disabled so both frameworks are captured in-process."
+  ]
+}

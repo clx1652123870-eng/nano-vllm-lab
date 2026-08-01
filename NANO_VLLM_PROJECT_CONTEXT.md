@@ -1,6 +1,6 @@
 # Nano-vLLM 项目上下文与后续开发交接
 
-> 更新时间：2026-07-28
+> 更新时间：2026-07-30
 > 用途：在新的 Codex 对话中快速恢复项目背景、代码现状、技术决策和后续计划。
 > 工作目录：`/home/agua/tensorrtlearning/nano-vllm`
 
@@ -34,14 +34,32 @@
 - HTTP 最大并发限制和 429 backpressure。
 - OpenAI 兼容的 `/v1/chat/completions` 非流式/流式接口。
 - C1/C2/C4 greedy token、decode batch 和系统吞吐回归脚本。
+- Encoder/Decoder Attention backend 分层抽象。
+- FlashAttention Vision/Decoder backend。
+- PyTorch SDPA Vision packed-varlen 正确性参考 backend。
+- 强制 cuDNN SDPA Vision backend。
+- 强制 PyTorch `SDPBackend.MATH` 的 Vision 正确性/性能基线。
+- 实验性 Triton packed-varlen Vision Attention backend。
+- 短 Window 走 Triton、长 Full 走 FlashAttention 的 Hybrid Vision backend。
+- Attention backend 的 Config、离线 profiling 和在线服务参数接线。
+- 五种 Vision Attention backend 的真实 shape 微基准、CUDA 数值对齐和真实
+  Qwen2.5-VL greedy smoke。
+- 同一 `vllm bench serve` 客户端下的 vLLM/nano-vllm C1/C2/C4 性能对比。
+- BF16 Softmax、RMSNorm、SiLU-and-Mul、Matmul 的项目内 CUDA/Triton 实现。
+- 基础算子 PyTorch CUDA/自定义 CUDA/Triton 正确性与性能基准。
+- Qwen2.5-VL-3B-Instruct-AWQ W4A16 checkpoint 加载和单图离线推理。
+- AWQ packed 权重加载、Triton 反量化和实验性 fused W4A16 GEMM。
+- AWQ 与外部 vLLM 的前 4 个 greedy token 对齐。
+- BF16/AWQ 权重显存、KV Cache 容量、TTFT、TPOT 和 E2E 对比。
 
 当前尚未完成：
 
 - 同一个 prefill batch 中处理多张图片。
 - API 进程与 EngineCore 进程拆分。
-- AWQ INT4 权重加载和量化 Linear。
-- Attention 后端统一抽象与系统 benchmark。
-- CUDA/Triton 关键算子融合。
+- Decoder 非 FlashAttention 参考/优化 backend。
+- Decoder 路径的 Nsight Systems/Compute 定位。
+- 生产级 AWQ fused INT4 GEMM。
+- 已胜出的 CUDA/Triton kernel 端到端替换与复测。
 
 因此当前准确状态是：
 
@@ -55,8 +73,15 @@ Async request queue/Future：已完成
 单图 prefill + continuous decode batching：已完成
 SSE/OpenAI API/取消/超时/并发保护：已实现
 C1/C2/C4 自动回归：脚本和真实 Qwen2.5-VL 回归均已完成
+Attention backend 接口与 Vision Flash/SDPA/Math/cuDNN/Triton：已完成
+Attention 真实 Window/Full correctness/performance benchmark：已完成
+vLLM/nano-vllm 同负载 C1/C2/C4 对比：已完成
 EngineCore 进程拆分：未实现
-AWQ/算子优化：未开始正式编码
+实验性 Triton Vision Attention：已实现，暂不替换 FlashAttention 默认路径
+Hybrid Vision Attention：已实现，端到端 TTFT 收益接近测量噪声
+基础 CUDA/Triton 算子：已实现并完成真实 shape 微基准
+AWQ：单 GPU W4A16 checkpoint 加载、离线推理和 profiling 已完成
+AWQ Triton fused GEMM：正确但慢于反量化 + cuBLAS，默认不启用
 ```
 
 ## 2. 最终项目目标
@@ -91,6 +116,7 @@ AWQ/算子优化：未开始正式编码
 - PyTorch SDPA。
 - FlashAttention 2。
 - cuDNN SDPA。
+- 实验性 Triton packed-varlen Attention。
 
 重点分析：
 
@@ -807,19 +833,19 @@ mrope_section * 2
 nanovllm/layers/attention.py::Attention
 ```
 
-视觉模型目前在：
+视觉模型在：
 
 ```text
 nanovllm/models/qwen2_5_vl.py::Qwen2_5_VisionAttention
 ```
 
-中直接调用：
+中通过：
 
-```python
-flash_attn_varlen_func
+```text
+EncoderAttentionBackend
 ```
 
-原因是现有公共 `Attention` 是 Decoder 专用抽象，它依赖：
+文本 `Attention` 仍是 Decoder runtime 层，它依赖：
 
 - 全局请求 `Context`。
 - `slot_mapping`。
@@ -837,24 +863,24 @@ flash_attn_varlen_func
 - 每层可能使用 Window 或 Full Attention。
 - 使用视觉自己的 `cu_seqlens`。
 
-因此不能直接复用现有 Decoder `Attention`。
+因此视觉模型不能直接复用现有 Decoder `Attention`。
 
-后续重构建议：
+当前已经按语义拆分：
 
 ```text
-layers/attention.py
-    DecoderAttention
-        Prefill
-        Decode
-        Paged KV Cache
+nanovllm/attention/base.py
+    DecoderAttentionBackend
+        causal prefill
+        paged-KV decode
 
-    EncoderAttention
-        non-causal varlen
+    EncoderAttentionBackend
+        packed varlen
         Window Attention
         Full Attention
 ```
 
-再将 PyTorch、FlashAttention、cuDNN 作为可切换 backend。
+视觉已支持 `flash_attn` 和 `torch_sdpa`，文本 Decoder 当前只支持
+`flash_attn`。后续增加 cuDNN 时只扩展 backend/factory，不在模型中散落分支。
 
 ## 13. 已完成的验证
 
@@ -1277,37 +1303,39 @@ docs/qwen2_5_vl_online_server.md
 在线服务代码、无 GPU 协议/生命周期测试和真实 Qwen2.5-VL C1/C2/C4 回归已经
 完成。在线阶段暂时封板，下一阶段进入 Attention backend，不继续扩展外围 API。
 
-## 17. Attention 后端重构建议
+## 17. Attention 后端抽象实现
 
-不要直接在各模型文件中散落 backend 调用。建议定义接口：
+当前已经实现两个独立接口，避免在模型文件中散落具体算子调用：
 
 ```python
 class EncoderAttentionBackend:
     def forward(
         self,
-        q,
-        k,
-        v,
-        cu_seqlens,
-        max_seqlen,
-        causal=False,
+        query, key, value, *,
+        cu_seqlens_q, cu_seqlens_k,
+        max_seqlen_q, max_seqlen_k,
+        softmax_scale, causal,
     ):
         ...
 ```
 
-实现：
+Decoder 接口单独覆盖 causal prefill 和 paged-KV decode：
 
 ```text
-TorchSDPABackend
-FlashAttentionBackend
-CuDNNAttentionBackend
+DecoderAttentionBackend.prefill(...)
+DecoderAttentionBackend.decode(...)
 ```
 
-Decoder 单独定义：
+当前实现矩阵：
 
 ```text
-DecoderPrefillBackend
-DecoderKVCacheBackend
+Vision Encoder:
+    flash_attn: supported
+    torch_sdpa: supported as a correctness reference
+
+Text Decoder prefill/decode:
+    flash_attn: supported
+    torch_sdpa: unsupported
 ```
 
 原因：
@@ -1317,7 +1345,28 @@ DecoderKVCacheBackend
 - Decoder FlashAttention 还要接收 paged KV cache 和 block table。
 - cuDNN 高层 SDPA 不直接接收 nano-vllm 的 block table。
 
-视觉 backend 初步 benchmark 可以从相同长度的单图开始，不必先处理 paged cache。
+配置分为：
+
+```text
+attention_backend
+    文本 Decoder backend
+
+vision_attention_backend
+    视觉 Encoder backend
+```
+
+当前默认值都为 `flash_attn`。`Config -> ModelRunner -> model constructor` 已完成
+接线，离线推理、离线 profiling、alignment 和在线服务 CLI 都可以指定视觉
+backend。factory 会拒绝未实现的 Decoder `torch_sdpa`，不会静默 fallback。
+
+`store_kvcache` Triton kernel 仍由 `nanovllm/layers/attention.py` 负责，backend
+负责 Attention 读取和计算。切换 backend 不改变 checkpoint 的 `state_dict` key。
+
+详细设计、命令、验证结果和面试问答：
+
+```text
+docs/attention_backends.md
+```
 
 ## 18. cuBLAS、cuDNN 和 FlashAttention 的结论
 
@@ -1644,8 +1693,12 @@ Day 21
 当前已经完成单图离线推理、异步 HTTP 服务和 continuous decode batching。
 
 当前已经实现 SSE、请求取消、超时/并发保护、OpenAI Chat Completions，
-并通过真实 Qwen2.5-VL C1/C2/C4 正确性与吞吐回归。下一步开始
-Attention backend 抽象和 benchmark。不要直接跳到 ZMQ/EngineCore 多进程。
+并通过真实 Qwen2.5-VL C1/C2/C4 正确性与吞吐回归。Encoder/Decoder Attention
+backend 抽象以及 Vision FlashAttention/PyTorch SDPA/cuDNN/Triton 已完成，
+Hybrid shape dispatch、基础 CUDA/Triton 算子、AWQ W4A16 离线推理、
+真实 Window/Full 微基准和 vLLM 对比也已完成。下一步先用 Nsight
+Systems/Compute 定位 C1/C4 decode TPOT 差距，再决定优化 Paged Attention、
+scheduler、sampling 或生产级 AWQ kernel，不要直接跳到 ZMQ/EngineCore 多进程。
 ```
 
 ## 25. 新对话开始时建议先执行
@@ -1660,6 +1713,7 @@ sed -n '1,220p' NANO_VLLM_PROJECT_CONTEXT.md
 sed -n '1,280p' nanovllm/engine/async_llm_engine.py
 sed -n '1,180p' nanovllm/engine/llm_engine.py
 sed -n '1,220p' examples/qwen2_5_vl_server.py
+sed -n '1,260p' docs/attention_backends.md
 ```
 
 然后重点阅读：
@@ -1672,6 +1726,24 @@ nanovllm/engine/scheduler.py
 nanovllm/engine/model_runner.py
 nanovllm/utils/context.py
 nanovllm/layers/attention.py
+nanovllm/attention/base.py
+nanovllm/attention/factory.py
+nanovllm/attention/flash_attn.py
+nanovllm/attention/torch_sdpa.py
+nanovllm/attention/triton_attn.py
+nanovllm/attention/hybrid.py
+nanovllm/kernels/triton_ops.py
+nanovllm/kernels/csrc/kernels.cu
+nanovllm/layers/quantization/awq.py
+nanovllm/layers/quantization/awq_kernels.py
+benchmarks/attention_backend_benchmark.py
+benchmarks/kernel_backend_benchmark.py
+benchmarks/awq_kernel_benchmark.py
+benchmarks/qwen2_5_vl_serving_benchmark.py
+docs/attention_backend_benchmark.md
+docs/custom_kernels_and_triton.md
+docs/qwen2_5_vl_awq.md
+docs/qwen2_5_vl_vllm_comparison.md
 ```
 
 ## 26. 继续开发时的原则
@@ -1763,3 +1835,509 @@ Mean client E2E: C1=510.02ms, C2=891.38ms, C4=1615.06ms
 C4 吞吐没有随 decode batch 线性提升，是因为 2049-token 的多模态 prefill
 仍逐请求串行执行，而当前只生成 8 个 token。这个结果证明 decode continuous
 batching 已生效，同时说明下一项端到端吞吐瓶颈在 multimodal prefill。
+
+## 28. Attention Backend V2 实现记录
+
+代码：
+
+```text
+nanovllm/attention/base.py
+    EncoderAttentionBackend
+    DecoderAttentionBackend
+
+nanovllm/attention/factory.py
+    backend 名称/别名
+    capability validation
+    lazy import
+
+nanovllm/attention/flash_attn.py
+    Vision packed-varlen
+    Decoder causal prefill
+    Decoder paged-KV decode
+
+nanovllm/attention/torch_sdpa.py
+    TorchSDPAEncoderBackend
+    CUDNNSDPAEncoderBackend
+    packed-varlen -> per-sequence SDPA adapter
+
+nanovllm/attention/triton_attn.py
+    BF16 packed-varlen forward kernel
+    GQA head mapping
+    online softmax
+```
+
+运行时参数：
+
+```text
+attention_backend=flash_attn
+vision_attention_backend=
+    flash_attn | torch_sdpa | cudnn_sdpa | triton | hybrid
+```
+
+真实图片 shape：
+
+```text
+assets/dog.png
+input_tokens=2049
+image_tokens=2025
+pixel_values=[8100, 1176]
+vision heads=16
+head_dim=80
+28 个 Window layer: 144 个 packed sequence，长度 4/16/64
+4 个 Full layer: 1 个 sequence，长度 8100
+```
+
+正式微基准（5 warmup、20 measure、BF16、RTX 5080）：
+
+```text
+Window mean:
+    hybrid      0.128 ms
+    triton      0.130 ms
+    flash_attn  0.146 ms
+    torch_sdpa  2.726 ms
+    cudnn_sdpa  3.696 ms
+
+Full mean:
+    flash_attn  4.354 ms
+    hybrid      4.363 ms
+    torch_sdpa  4.494 ms
+    cudnn_sdpa  5.846 ms
+    triton      5.956 ms
+
+28 * Window + 4 * Full:
+    hybrid      21.05 ms, 0.98x
+    flash_attn  21.51 ms, 1.00x
+    triton      27.47 ms, 1.28x
+    torch_sdpa  94.32 ms, 4.38x
+    cudnn_sdpa 126.87 ms, 5.90x
+```
+
+五种 backend 的真实 Qwen2.5-VL 前 4 个 greedy token 均为：
+
+```text
+[108893, 45930, 101987, 99593]
+```
+
+当前结论：
+
+- Triton 在短 Window 上比外部 FlashAttention 快约 11%，但 Full 慢约 37%。
+- Hybrid 对短/长 sequence length 分别选择 Triton/FlashAttention。
+- Hybrid mean TTFT=357.73ms，纯 Flash=358.19ms，0.13% 差异接近噪声。
+- FlashAttention 因此继续作为默认后端。
+- Torch/cuDNN 在 Window case 慢，主要因为当前 adapter 有 CPU offset 同步和
+  144 次逐段调用，不能据此断言底层 SDPA kernel 普遍慢。
+- Decoder 仍只支持 FlashAttention，尚未实现 Triton Paged Attention。
+
+详细文档与原始数据：
+
+```text
+docs/attention_backends.md
+docs/attention_backend_benchmark.md
+profiles/attention_backends_qwen2_5_vl_dog.json
+```
+
+## 29. vLLM 与 nano-vllm 同负载对比
+
+对比原则：
+
+```text
+同一模型和 BF16
+同一 RTX 5080
+单 GPU、TP=1、eager
+同一 assets/dog.png
+同一 prompt: 描述这张图片
+同一输入长度: 2049
+同一输出长度: 32，ignore_eos
+同一 vllm bench serve 客户端
+3 warmup + 12 measure
+C1/C2/C4
+```
+
+结果（2026-07-30）：
+
+```text
+C1:
+    nano  TTFT=62.69ms  TPOT=24.96ms  req/s=1.20  E2E=836.42ms
+    vLLM TTFT=354.42ms TPOT=9.30ms   req/s=1.56  E2E=642.60ms
+
+C2:
+    nano  TTFT=77.64ms  TPOT=35.70ms  req/s=1.69  E2E=1184.33ms
+    vLLM TTFT=492.15ms TPOT=14.61ms  req/s=2.11  E2E=945.07ms
+
+C4:
+    nano  TTFT=152.77ms TPOT=57.20ms  req/s=2.07  E2E=1926.02ms
+    vLLM TTFT=889.13ms TPOT=19.12ms  req/s=2.69  E2E=1481.71ms
+```
+
+结论：
+
+- nano-vllm 的首 token 路径在这套固定 eager 配置下更短。
+- vLLM 的 TPOT 低 2.44x 到 2.99x，请求吞吐高约 25% 到 30%。
+- 下一步应先定位 decode TPOT 差距，不应仅根据视觉 Attention 微基准继续优化
+  Vision Encoder。
+
+复现脚本、完整控制变量、指标解释和原始 JSON：
+
+```text
+benchmarks/qwen2_5_vl_serving_benchmark.py
+benchmarks/data/qwen2_5_vl_dog.jsonl
+docs/qwen2_5_vl_vllm_comparison.md
+profiles/framework_comparison/*.json
+```
+
+## 30. 2026-07-30 之前规划的下一步
+
+优先执行：
+
+```text
+1. 分别抓 nano-vllm C1/C4 的 Nsight Systems 时间线。
+2. 对比 CPU scheduler gap 和每个 decode step 的 kernel 序列。
+3. 用 Nsight Compute 检查占比最高的 1~2 个 kernel。
+4. 判断瓶颈属于 Paged Attention、KV cache write、LM head、sampling
+   还是 Python/线程调度。
+5. 只有证据指向 Attention，才开始 Triton Paged Attention。
+6. 随后进入 AWQ W4A16 checkpoint 加载和正确性基线。
+```
+
+其中第 6 项已经在本轮完成。以下原则仍有效：
+
+```text
+ZMQ/EngineCore 多进程重构
+多图 prefill batching
+为了使用 Triton 而强行替换更快的 FlashAttention
+在没有 profiler 证据时直接写大规模融合 kernel
+```
+
+## 31. CUDA/Triton 基础算子实现与结论
+
+本轮新增：
+
+```text
+nanovllm/kernels/csrc/kernels.cu
+    BF16 Softmax
+    BF16 RMSNorm
+    BF16 SiLU-and-Mul
+    教学版 tiled BF16 Matmul
+
+nanovllm/kernels/triton_ops.py
+    对应的四个 Triton kernel
+
+benchmarks/kernel_backend_benchmark.py
+tests/test_custom_kernels.py
+```
+
+环境：
+
+```text
+RTX 5080
+PyTorch 2.11.0+cu130
+CUDA 13.0
+Triton 3.6.0
+10 warmup + 30 measure
+结果使用 P50
+```
+
+关键结果：
+
+```text
+Softmax [1024, 2048]:
+    torch_cuda  0.0196 ms
+    custom_cuda 0.0150 ms
+    triton      0.0166 ms
+
+RMSNorm [8100, 1280]:
+    torch_cuda  0.0269 ms
+    custom_cuda 0.0341 ms
+    triton      0.0263 ms
+
+SiLU-and-Mul [2049, 22016]:
+    torch_cuda  0.2699 ms
+    custom_cuda 0.1702 ms
+    triton      0.1697 ms
+
+Matmul [32, 2048] x [2048, 2048]:
+    torch/cuBLAS 0.0200 ms
+    custom_cuda  0.1294 ms
+    triton       0.0262 ms
+```
+
+结论：
+
+- 自定义 Softmax/RMSNorm 只在个别 shape 胜出，不能全局替换。
+- SiLU-and-Mul 融合稳定减少中间 Tensor/launch，值得继续做 compiled baseline
+  和端到端验证。
+- 教学版 CUDA Matmul 没有 Tensor Core，明显慢于 cuBLAS；Triton `tl.dot` 使用
+  Tensor Core 后更接近，但仍未超过库。
+- 独立 Softmax 不会优化已经融合 Softmax 的 FlashAttention。
+- 默认模型路径没有为了“自研算子”而强行替换更快的生产库。
+
+复现：
+
+```bash
+TORCH_CUDA_ARCH_LIST=12.0 \
+/home/agua/anaconda3/envs/yolo26/bin/python \
+  benchmarks/kernel_backend_benchmark.py \
+  --warmup-iters 10 \
+  --measure-iters 30 \
+  --output-json profiles/kernel_backends_rtx5080.json
+```
+
+详细文档：
+
+```text
+docs/custom_kernels_and_triton.md
+```
+
+## 32. AWQ W4A16 实现记录
+
+本地 checkpoint：
+
+```text
+/home/agua/models/Qwen2.5-VL-3B-Instruct-AWQ
+```
+
+支持格式：
+
+```text
+bits=4
+group_size=128
+zero_point=true
+version=gemm
+tensor_parallel_size=1
+text Decoder quantized
+visual modules kept in BF16
+```
+
+代码：
+
+```text
+nanovllm/layers/quantization/awq.py
+    AWQConfig
+    AWQ Column/Merged/QKV/Row Linear
+    packed component shard loader
+
+nanovllm/layers/quantization/awq_kernels.py
+    Triton INT4 unpack/dequantize
+    experimental fused W4A16 GEMM
+
+benchmarks/awq_kernel_benchmark.py
+tests/test_awq.py
+```
+
+checkpoint packed layout：
+
+```text
+qweight: [K, N/8] int32
+qzeros:  [K/128, N/8] int32
+scales:  [K/128, N] fp16
+nibble order: [0, 4, 1, 5, 2, 6, 3, 7]
+```
+
+正确性：
+
+```text
+synthetic dequantize: exact match
+synthetic fused GEMM: BF16 tolerance passed
+nano-vllm AWQ first 4 greedy tokens:
+    [108893, 45930, 101987, 99593]
+vLLM AWQ first 4 greedy tokens:
+    [108893, 45930, 101987, 99593]
+```
+
+BF16/AWQ 离线 profile：
+
+| 指标 | BF16 | AWQ |
+| --- | ---: | ---: |
+| model unique storage | 6.99 GB | 3.17 GB |
+| engine init | 3775.60 ms | 1953.83 ms |
+| KV cache blocks | 118 | 563 |
+| mean TTFT | 357.09 ms | 366.93 ms |
+| decode TPOT | 13.65 ms | 21.54 ms |
+| decode throughput | 73.40 tok/s | 46.43 tok/s |
+| E2E | 780.45 ms | 1034.93 ms |
+
+AWQ 的模型权重存储减少 54.7%，KV blocks 增加 4.77x，但当前 decode TPOT
+慢 1.58x。原因是尚无生产级 fused INT4 GEMM，默认路径仍要在每次 Linear 中
+执行反量化。
+
+实验性 Triton fused W4A16 kernel 在真实 q/gate/down projection 上比
+“反量化 + cuBLAS”慢约 6 到 13 倍，所以默认：
+
+```text
+NANOVLLM_AWQ_KERNEL=dequantize
+```
+
+`NANOVLLM_AWQ_KERNEL=triton_fused` 仅用于研究和复现。
+
+详细格式、命令、性能解释和面试问答：
+
+```text
+docs/qwen2_5_vl_awq.md
+profiles/qwen2_5_vl_bf16_after_kernels.json
+profiles/qwen2_5_vl_awq.json
+profiles/awq_kernels_qwen2_5_vl_3b.json
+```
+
+## 33. 当前准确下一步
+
+优先级：
+
+```text
+1. 抓 nano-vllm BF16 在线 C1/C4 Nsight Systems 时间线。
+2. 分解 decode TPOT 中 CPU gap、Paged Attention、Linear、LM head 和 sampler。
+3. 对 SiLU-and-Mul 自定义 CUDA 与现有 torch.compile 路径做端到端 A/B。
+4. 若量化吞吐是主目标，研究 Marlin 风格 weight repack 和 W4A16 GEMM。
+5. 用 AWQ 重新跑在线 C1/C2/C4，区分容量收益和单请求计算回退。
+6. 有 profiler 证据后再决定 Triton Paged Attention 或其他融合。
+```
+
+当前不应宣称：
+
+```text
+Triton 全面超过 CUDA
+Hybrid 相较纯 FlashAttention 已显著降低端到端 TTFT
+AWQ 同时完成显存和速度优化
+教学版 CUDA Matmul 可以替换 cuBLAS
+```
+
+## 34. PyTorch 基线专项对比
+
+为避免把 PyTorch 自动 SDPA 误称为基础 cuBLAS 路径，本轮新增：
+
+```text
+vision_attention_backend=torch_math
+    强制 SDPBackend.MATH
+    对应 QK^T -> Softmax -> PV 基础数学路径
+
+vision_attention_backend=torch_sdpa
+    PyTorch 自动选择内部 SDPA backend
+```
+
+RTX 5080、`assets/dog.png`、8100 个视觉 patch 的 Attention 微基准 P50：
+
+```text
+Window:
+    torch_math 9.736 ms
+    hybrid     0.115 ms
+    speedup   84.7x
+
+Full:
+    torch_math 66.489 ms
+    hybrid      4.433 ms
+    speedup     15.0x
+
+28 * Window + 4 * Full:
+    torch_math 538.56 ms
+    hybrid      20.95 ms
+    speedup     25.7x
+```
+
+严格 Math 路径在该高分辨率输入的完整模型上申请额外 3.91 GiB 时 OOM，Hybrid
+正常运行。PyTorch 自动 SDPA 可运行，对应高分辨率端到端 P50：
+
+| 指标 | PyTorch SDPA | Hybrid |
+| --- | ---: | ---: |
+| TTFT | 457.94 ms | 364.77 ms |
+| Prefill throughput | 4474 tok/s | 5617 tok/s |
+| 32-token E2E | 885.94 ms | 797.87 ms |
+
+即 TTFT 降低 20.3%，Prefill 吞吐提升 25.5%，E2E 降低 9.9%。Decode backend
+没有变化，所以不能宣称 Decode 得到加速。
+
+在 `assets/logo.png`、2664 个视觉 patch 的可运行严格 Math 端到端对比中：
+
+| 指标 | PyTorch Math | Hybrid |
+| --- | ---: | ---: |
+| TTFT | 237.03 ms | 105.16 ms |
+| Prefill throughput | 2911 tok/s | 6562 tok/s |
+| 32-token E2E | 658.18 ms | 532.54 ms |
+| Peak allocated | 8.88 GB | 8.05 GB |
+
+即 TTFT 2.25x、Prefill 吞吐提升 125.4%、E2E 降低 19.1%。
+
+详细实验边界、简历表述和复现命令：
+
+```text
+docs/pytorch_baseline_optimization_comparison.md
+profiles/attention_pytorch_math_vs_hybrid_rtx5080.json
+profiles/qwen2_5_vl_pytorch_vision_baseline.json
+profiles/qwen2_5_vl_hybrid_vs_pytorch.json
+profiles/qwen2_5_vl_dog_pytorch_math_oom.json
+profiles/qwen2_5_vl_logo_pytorch_math.json
+profiles/qwen2_5_vl_logo_hybrid.json
+profiles/kernels_pytorch_vs_custom_rtx5080.json
+```
+
+## 35. nano-vllm 与 vLLM 算子级对比
+
+新增统一离线算子 profile：
+
+```text
+benchmarks/qwen2_5_vl_operator_profile.py
+benchmarks/compare_operator_profiles.py
+```
+
+控制变量为 RTX 5080、同一 BF16 Qwen2.5-VL-3B、同一 `assets/dog.png`、
+TP=1、eager、关闭 prefix cache、固定 32 个 greedy token。为抓到 vLLM worker
+内部 kernel，profile 进程设置 `VLLM_ENABLE_V1_MULTIPROCESSING=0`。
+
+正式结果：
+
+| 阶段 | nano CUDA | vLLM CUDA | nano 相对差距 | launches nano/vLLM |
+| --- | ---: | ---: | ---: | ---: |
+| O1：视觉编码 + prefill + 首 token | 354.42 ms | 284.24 ms | +24.7% | 2534 / 978 |
+| O32：完整请求 | 623.65 ms | 537.97 ms | +15.9% | 35425 / 18679 |
+| decode/token 差分估算 | 8.685 ms | 8.185 ms | +6.1% | 1061 / 571 |
+
+O32 中双方核心算子已经接近：
+
+```text
+GEMM:      nano 447.886 ms, vLLM 449.296 ms
+Attention: nano  42.797 ms, vLLM  42.430 ms
+```
+
+主要差距：
+
+```text
+Elementwise/Layout O32:
+    nano 108.321 ms
+    vLLM  12.260 ms
+    nano 8.84x
+
+Elementwise/Layout decode/token:
+    nano 0.952 ms, 688 launches
+    vLLM 0.207 ms, 121 launches
+
+Sampling decode/token:
+    nano 0.090 ms
+    vLLM 0.0046 ms
+    nano 19.35x
+```
+
+nano-vllm 的 Qwen2.5-VL MRoPE 仍由 float/cat/mul/add 等 PyTorch primitive
+组成，greedy sampler 也会先执行 softmax + exponential 随机分支。vLLM profile
+中可以看到 `rotary_kernel`、Triton MRoPE、`fused_add_rms_norm_kernel`、
+`act_and_mul_kernel` 和 `reshape_and_cache_flash_kernel` 等领域融合算子。
+
+当前优化优先级更新为：
+
+```text
+1. greedy sampler fast path，temperature=0 时跳过随机采样分支。
+2. 单 kernel Qwen2.5-VL MRoPE，减少 FP32 中间 tensor、cat 和 copy。
+3. 验证并稳定融合 residual + RMSNorm。
+4. 清理视觉/文本路径中的 dtype 与 layout 转换。
+5. 用 Nsight Systems 定位 decode 的 CPU launch gap，再做 CUDA Graph。
+6. 暂不重写 GEMM 和 FlashAttention；本轮两者与 vLLM 基本持平。
+```
+
+正确性方面，O32 前 21 个 greedy token 一致，之后因 BF16 数值路径分叉，但语义
+均正确。详细口径、完整分类、复现命令和面试表述：
+
+```text
+docs/qwen2_5_vl_vllm_operator_comparison.md
+profiles/operator_comparison/nano-dog-o1.json
+profiles/operator_comparison/nano-dog-o32.json
+profiles/operator_comparison/vllm-dog-o1.json
+profiles/operator_comparison/vllm-dog-o32.json
+profiles/operator_comparison/summary.json
+```

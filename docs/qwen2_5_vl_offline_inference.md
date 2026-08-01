@@ -7,6 +7,7 @@
 已支持：
 
 - Qwen2.5-VL-3B-Instruct。
+- Qwen2.5-VL-3B-Instruct-AWQ 的 W4A16 文本权重。
 - 单 GPU，`tensor_parallel_size=1`。
 - 单请求单图片。
 - `AutoProcessor` 产出的 `input_ids`、`mm_token_type_ids`、`pixel_values`、`image_grid_thw`。
@@ -72,6 +73,58 @@
 
 ```text
 这张图片展示了一个名为“Nano-v
+```
+
+Attention 后端现在可以单独配置。文本 Decoder 当前使用 `flash_attn`，视觉
+Encoder 可选择 `flash_attn`、`torch_sdpa`、`torch_math`、`cudnn_sdpa`、
+`triton` 或 `hybrid`：
+
+```bash
+/home/agua/anaconda3/envs/yolo26/bin/python examples/qwen2_5_vl_offline.py \
+  --engine nano \
+  --max-new-tokens 8 \
+  --no-tqdm \
+  --max-model-len 4096 \
+  --max-num-batched-tokens 4096 \
+  --gpu-memory-utilization 0.72 \
+  --attention-backend flash_attn \
+  --vision-attention-backend torch_sdpa
+```
+
+接口设计、能力边界和 benchmark 方法见：
+
+```text
+docs/attention_backends.md
+```
+
+## AWQ W4A16 离线推理
+
+本地 AWQ checkpoint：
+
+```text
+/home/agua/models/Qwen2.5-VL-3B-Instruct-AWQ
+```
+
+运行命令：
+
+```bash
+/home/agua/anaconda3/envs/yolo26/bin/python examples/qwen2_5_vl_offline.py \
+  --engine nano \
+  --model /home/agua/models/Qwen2.5-VL-3B-Instruct-AWQ \
+  --image assets/dog.png \
+  --max-new-tokens 32 \
+  --no-tqdm \
+  --gpu-memory-utilization 0.72 \
+  --max-model-len 4096 \
+  --max-num-batched-tokens 4096
+```
+
+第一版支持 `bits=4`、`group_size=128`、asymmetric zero point、单 GPU。视觉塔
+仍是 BF16，文本 Decoder 的 Linear 从 packed INT4 checkpoint 加载。详细格式、
+kernel 和 BF16/AWQ 性能对比见：
+
+```text
+docs/qwen2_5_vl_awq.md
 ```
 
 ## 数据链路

@@ -1,0 +1,41 @@
+import os
+from functools import lru_cache
+from pathlib import Path
+
+import torch
+from torch.utils.cpp_extension import load
+
+
+@lru_cache(maxsize=1)
+def _load_extension():
+    source_dir = Path(__file__).resolve().parent / "csrc"
+    return load(
+        name="nanovllm_cuda_ops_v1",
+        sources=[
+            str(source_dir / "bindings.cpp"),
+            str(source_dir / "kernels.cu"),
+        ],
+        extra_cflags=["-O3"],
+        extra_cuda_cflags=["-O3", "--use_fast_math"],
+        verbose=os.getenv("NANOVLLM_CUDA_BUILD_VERBOSE") == "1",
+    )
+
+
+def cuda_softmax(x: torch.Tensor) -> torch.Tensor:
+    return _load_extension().softmax(x)
+
+
+def cuda_rms_norm(
+    x: torch.Tensor,
+    weight: torch.Tensor,
+    eps: float,
+) -> torch.Tensor:
+    return _load_extension().rms_norm(x, weight, eps)
+
+
+def cuda_silu_and_mul(x: torch.Tensor) -> torch.Tensor:
+    return _load_extension().silu_and_mul(x)
+
+
+def cuda_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    return _load_extension().matmul(a, b)

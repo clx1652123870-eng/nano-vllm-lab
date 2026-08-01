@@ -1,7 +1,6 @@
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-from flash_attn import flash_attn_varlen_func
 from torch import nn
 from transformers.models.qwen2_5_vl.configuration_qwen2_5_vl import (
     Qwen2_5_VLConfig,
@@ -9,6 +8,7 @@ from transformers.models.qwen2_5_vl.configuration_qwen2_5_vl import (
     Qwen2_5_VLVisionConfig,
 )
 
+from nanovllm.attention import create_encoder_attention_backend
 from nanovllm.layers.activation import SiluAndMul
 from nanovllm.layers.attention import Attention
 from nanovllm.layers.embed_head import ParallelLMHead, VocabParallelEmbedding
@@ -17,6 +17,12 @@ from nanovllm.layers.linear import (
     MergedColumnParallelLinear,
     QKVParallelLinear,
     RowParallelLinear,
+)
+from nanovllm.layers.quantization import (
+    AWQConfig,
+    AWQMergedColumnParallelLinear,
+    AWQQKVParallelLinear,
+    AWQRowParallelLinear,
 )
 
 
@@ -164,12 +170,18 @@ def apply_vision_rotary_emb(
 
 class Qwen2_5_VisionAttention(nn.Module):
 
-    def __init__(self, config: Qwen2_5_VLVisionConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLVisionConfig,
+        attention_backend: str = "flash_attn",
+    ) -> None:
         super().__init__()
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_heads
         self.head_dim = self.hidden_size // self.num_heads
         self.scale = self.head_dim**-0.5
+        self.backend = create_encoder_attention_backend(attention_backend)
+        self.backend_name = self.backend.name
         # The vision tower is replicated across TP ranks in this first version.
         self.qkv = nn.Linear(self.hidden_size, self.hidden_size * 3, bias=True)
         self.proj = nn.Linear(self.hidden_size, self.hidden_size, bias=True)
@@ -188,7 +200,7 @@ class Qwen2_5_VisionAttention(nn.Module):
         query, key, value = qkv.unbind(dim=1)
         query, key = apply_vision_rotary_emb(query, key, cos, sin)
         max_seqlen = int((cu_seqlens[1:] - cu_seqlens[:-1]).max().item())
-        output = flash_attn_varlen_func(
+        output = self.backend.forward(
             query,
             key,
             value,
@@ -227,11 +239,15 @@ class Qwen2_5_VisionMLP(nn.Module):
 
 class Qwen2_5_VisionBlock(nn.Module):
 
-    def __init__(self, config: Qwen2_5_VLVisionConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLVisionConfig,
+        attention_backend: str = "flash_attn",
+    ) -> None:
         super().__init__()
         self.norm1 = Qwen2_5_VisionRMSNorm(config.hidden_size, eps=1e-6)
         self.norm2 = Qwen2_5_VisionRMSNorm(config.hidden_size, eps=1e-6)
-        self.attn = Qwen2_5_VisionAttention(config)
+        self.attn = Qwen2_5_VisionAttention(config, attention_backend)
         self.mlp = Qwen2_5_VisionMLP(config)
 
     def forward(
@@ -350,8 +366,13 @@ def get_vision_window_index(
 
 class Qwen2_5_VisionTransformer(nn.Module):
 
-    def __init__(self, config: Qwen2_5_VLVisionConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLVisionConfig,
+        attention_backend: str = "flash_attn",
+    ) -> None:
         super().__init__()
+        self.attention_backend = attention_backend
         self.spatial_merge_size = config.spatial_merge_size
         self.spatial_merge_unit = self.spatial_merge_size**2
         self.patch_size = config.patch_size
@@ -361,7 +382,8 @@ class Qwen2_5_VisionTransformer(nn.Module):
         head_dim = config.hidden_size // config.num_heads
         self.rotary_pos_emb = Qwen2_5_VisionRotaryEmbedding(head_dim // 2)
         self.blocks = nn.ModuleList(
-            Qwen2_5_VisionBlock(config) for _ in range(config.depth)
+            Qwen2_5_VisionBlock(config, attention_backend)
+            for _ in range(config.depth)
         )
         self.merger = Qwen2_5_VisionPatchMerger(config)
 
@@ -421,7 +443,12 @@ class Qwen2_5_VisionTransformer(nn.Module):
 
 class Qwen2_5_VLAttention(nn.Module):
 
-    def __init__(self, config: Qwen2_5_VLTextConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLTextConfig,
+        attention_backend: str = "flash_attn",
+        quant_config: AWQConfig | None = None,
+    ) -> None:
         super().__init__()
         tp_size = dist.get_world_size()
         self.total_num_heads = config.num_attention_heads
@@ -434,18 +461,34 @@ class Qwen2_5_VLAttention(nn.Module):
         self.q_size = self.num_heads * self.head_dim
         self.kv_size = self.num_kv_heads * self.head_dim
         self.scaling = self.head_dim**-0.5
-        self.qkv_proj = QKVParallelLinear(
-            config.hidden_size,
-            self.head_dim,
-            self.total_num_heads,
-            self.total_num_kv_heads,
-            bias=True,
-        )
-        self.o_proj = RowParallelLinear(
-            self.total_num_heads * self.head_dim,
-            config.hidden_size,
-            bias=False,
-        )
+        if quant_config is None:
+            self.qkv_proj = QKVParallelLinear(
+                config.hidden_size,
+                self.head_dim,
+                self.total_num_heads,
+                self.total_num_kv_heads,
+                bias=True,
+            )
+            self.o_proj = RowParallelLinear(
+                self.total_num_heads * self.head_dim,
+                config.hidden_size,
+                bias=False,
+            )
+        else:
+            self.qkv_proj = AWQQKVParallelLinear(
+                config.hidden_size,
+                self.head_dim,
+                self.total_num_heads,
+                self.total_num_kv_heads,
+                quant_config,
+                bias=True,
+            )
+            self.o_proj = AWQRowParallelLinear(
+                self.total_num_heads * self.head_dim,
+                config.hidden_size,
+                quant_config,
+                bias=False,
+            )
         rope_parameters = config.rope_parameters
         self.rotary_emb = Qwen2_5_VLRotaryEmbedding(
             self.head_dim,
@@ -457,6 +500,7 @@ class Qwen2_5_VLAttention(nn.Module):
             self.head_dim,
             self.scaling,
             self.num_kv_heads,
+            backend=attention_backend,
         )
 
     def forward(
@@ -478,20 +522,38 @@ class Qwen2_5_VLAttention(nn.Module):
 
 class Qwen2_5_VLMLP(nn.Module):
 
-    def __init__(self, config: Qwen2_5_VLTextConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLTextConfig,
+        quant_config: AWQConfig | None = None,
+    ) -> None:
         super().__init__()
         if config.hidden_act != "silu":
             raise ValueError(f"unsupported text activation: {config.hidden_act}")
-        self.gate_up_proj = MergedColumnParallelLinear(
-            config.hidden_size,
-            [config.intermediate_size] * 2,
-            bias=False,
-        )
-        self.down_proj = RowParallelLinear(
-            config.intermediate_size,
-            config.hidden_size,
-            bias=False,
-        )
+        if quant_config is None:
+            self.gate_up_proj = MergedColumnParallelLinear(
+                config.hidden_size,
+                [config.intermediate_size] * 2,
+                bias=False,
+            )
+            self.down_proj = RowParallelLinear(
+                config.intermediate_size,
+                config.hidden_size,
+                bias=False,
+            )
+        else:
+            self.gate_up_proj = AWQMergedColumnParallelLinear(
+                config.hidden_size,
+                [config.intermediate_size] * 2,
+                quant_config,
+                bias=False,
+            )
+            self.down_proj = AWQRowParallelLinear(
+                config.intermediate_size,
+                config.hidden_size,
+                quant_config,
+                bias=False,
+            )
         self.act_fn = SiluAndMul()
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -500,10 +562,19 @@ class Qwen2_5_VLMLP(nn.Module):
 
 class Qwen2_5_VLDecoderLayer(nn.Module):
 
-    def __init__(self, config: Qwen2_5_VLTextConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLTextConfig,
+        attention_backend: str = "flash_attn",
+        quant_config: AWQConfig | None = None,
+    ) -> None:
         super().__init__()
-        self.self_attn = Qwen2_5_VLAttention(config)
-        self.mlp = Qwen2_5_VLMLP(config)
+        self.self_attn = Qwen2_5_VLAttention(
+            config,
+            attention_backend,
+            quant_config,
+        )
+        self.mlp = Qwen2_5_VLMLP(config, quant_config)
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = RMSNorm(
             config.hidden_size, eps=config.rms_norm_eps
@@ -529,11 +600,17 @@ class Qwen2_5_VLDecoderLayer(nn.Module):
 
 class Qwen2_5_VLTextModel(nn.Module):
 
-    def __init__(self, config: Qwen2_5_VLTextConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLTextConfig,
+        attention_backend: str = "flash_attn",
+        quant_config: AWQConfig | None = None,
+    ) -> None:
         super().__init__()
         self.embed_tokens = VocabParallelEmbedding(config.vocab_size, config.hidden_size)
         self.layers = nn.ModuleList(
-            Qwen2_5_VLDecoderLayer(config) for _ in range(config.num_hidden_layers)
+            Qwen2_5_VLDecoderLayer(config, attention_backend, quant_config)
+            for _ in range(config.num_hidden_layers)
         )
         self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
@@ -563,9 +640,19 @@ class Qwen2_5_VLForConditionalGeneration(nn.Module):
         "v_proj": ("qkv_proj", "v"),
     }
 
-    def __init__(self, config: Qwen2_5_VLConfig) -> None:
+    def __init__(
+        self,
+        config: Qwen2_5_VLConfig,
+        attention_backend: str = "flash_attn",
+        vision_attention_backend: str | None = None,
+    ) -> None:
         super().__init__()
         self.config = config
+        self.quant_config = AWQConfig.from_hf_config(config)
+        if vision_attention_backend is None:
+            vision_attention_backend = attention_backend
+        self.attention_backend = attention_backend
+        self.vision_attention_backend = vision_attention_backend
         self.packed_modules_mapping = dict(type(self).packed_modules_mapping)
         for layer_idx in range(config.text_config.num_hidden_layers):
             prefix = f"model.layers.{layer_idx}.mlp"
@@ -577,8 +664,15 @@ class Qwen2_5_VLForConditionalGeneration(nn.Module):
                 f"{prefix}.gate_up_proj",
                 1,
             )
-        self.visual = Qwen2_5_VisionTransformer(config.vision_config)
-        self.model = Qwen2_5_VLTextModel(config.text_config)
+        self.visual = Qwen2_5_VisionTransformer(
+            config.vision_config,
+            vision_attention_backend,
+        )
+        self.model = Qwen2_5_VLTextModel(
+            config.text_config,
+            attention_backend,
+            self.quant_config,
+        )
         self.lm_head = ParallelLMHead(
             config.text_config.vocab_size,
             config.text_config.hidden_size,
