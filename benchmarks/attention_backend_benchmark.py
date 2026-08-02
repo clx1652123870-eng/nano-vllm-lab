@@ -31,7 +31,10 @@ def parse_args():
     parser.add_argument("--prompt", default="描述这张图片")
     parser.add_argument(
         "--backends",
-        default="flash_attn,torch_sdpa,cudnn_sdpa,triton,hybrid",
+        default=(
+            "torch_math,torch_sdpa,cuda_fused,triton,"
+            "flash_attn,cuda_hybrid,hybrid"
+        ),
     )
     parser.add_argument("--cases", default="window,full")
     parser.add_argument("--warmup-iters", type=int, default=3)

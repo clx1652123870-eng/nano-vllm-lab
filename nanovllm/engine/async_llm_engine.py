@@ -1,4 +1,5 @@
 import asyncio
+import os
 import threading
 from collections.abc import AsyncIterator, Callable
 from concurrent.futures import Future
@@ -89,6 +90,7 @@ class AsyncLLMEngine:
         self._state_lock = threading.Lock()
         self._startup_error: BaseException | None = None
         self._startup_ms: float | None = None
+        self._model_metadata: dict[str, Any] = {}
         self._accepting_requests = True
         self._active_request_ids: set[str] = set()
         self._outstanding_request_ids: set[str] = set()
@@ -119,6 +121,10 @@ class AsyncLLMEngine:
     @property
     def startup_ms(self):
         return self._startup_ms
+
+    @property
+    def model_metadata(self):
+        return dict(self._model_metadata)
 
     async def generate(
         self,
@@ -249,6 +255,7 @@ class AsyncLLMEngine:
                 "last_batch_size": self._last_batch_size,
                 "max_batch_size": self._max_batch_size,
                 "max_decode_batch_size": self._max_decode_batch_size,
+                "model": dict(self._model_metadata),
             }
 
     def shutdown(self, timeout: float | None = None):
@@ -266,6 +273,7 @@ class AsyncLLMEngine:
             t0 = perf_counter()
             llm = LLM(self.model, **self.engine_kwargs)
             sync_cuda()
+            self._model_metadata = build_model_metadata(llm)
             self._startup_ms = elapsed_ms(t0)
         except BaseException as exc:
             self._startup_error = exc
@@ -662,6 +670,29 @@ def mean(values: list[int]):
 
 def bytes_to_gb(value: int):
     return value / 1024**3
+
+
+def build_model_metadata(llm):
+    config = llm.config
+    hf_config = getattr(config, "hf_config", None)
+    quantization_config = getattr(hf_config, "quantization_config", None) or {}
+    quantization = quantization_config.get("quant_method")
+    return {
+        "quantization": quantization,
+        "quantization_kernel": (
+            os.getenv("NANOVLLM_AWQ_KERNEL", "dequantize")
+            if quantization == "awq"
+            else None
+        ),
+        "num_kvcache_blocks": getattr(config, "num_kvcache_blocks", None),
+        "max_num_seqs": getattr(config, "max_num_seqs", None),
+        "attention_backend": getattr(config, "attention_backend", None),
+        "vision_attention_backend": getattr(
+            config,
+            "vision_attention_backend",
+            None,
+        ),
+    }
 
 
 def cuda_memory_stats():

@@ -14,7 +14,7 @@ def parse_args():
     parser.add_argument(
         "--framework-label",
         required=True,
-        choices=["nano-vllm", "vllm"],
+        choices=["nano-vllm", "nano-vllm-awq", "vllm"],
     )
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument(
@@ -56,7 +56,12 @@ def main():
 
     result_dir = Path(args.result_dir)
     result_dir.mkdir(parents=True, exist_ok=True)
-    short_label = "nano" if args.framework_label == "nano-vllm" else "vllm"
+    short_labels = {
+        "nano-vllm": "nano",
+        "nano-vllm-awq": "nano-awq",
+        "vllm": "vllm",
+    }
+    short_label = short_labels[args.framework_label]
     for concurrency in concurrencies:
         filename = f"{short_label}-c{concurrency}-o{args.output_len}.json"
         command = [

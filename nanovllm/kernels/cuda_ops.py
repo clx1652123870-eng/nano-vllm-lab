@@ -10,7 +10,7 @@ from torch.utils.cpp_extension import load
 def _load_extension():
     source_dir = Path(__file__).resolve().parent / "csrc"
     return load(
-        name="nanovllm_cuda_ops_v1",
+        name="nanovllm_cuda_ops_v2",
         sources=[
             str(source_dir / "bindings.cpp"),
             str(source_dir / "kernels.cu"),
@@ -39,3 +39,27 @@ def cuda_silu_and_mul(x: torch.Tensor) -> torch.Tensor:
 
 def cuda_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     return _load_extension().matmul(a, b)
+
+
+def cuda_packed_attention(
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    cu_seqlens_q: torch.Tensor,
+    cu_seqlens_k: torch.Tensor,
+    max_seqlen_q: int,
+    max_seqlen_k: int,
+    softmax_scale: float,
+    causal: bool,
+) -> torch.Tensor:
+    return _load_extension().packed_attention(
+        query,
+        key,
+        value,
+        cu_seqlens_q,
+        cu_seqlens_k,
+        max_seqlen_q,
+        max_seqlen_k,
+        softmax_scale,
+        causal,
+    )

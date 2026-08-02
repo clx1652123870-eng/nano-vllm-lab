@@ -1,8 +1,8 @@
-# Qwen2.5-VL AWQ W4A16 离线推理
+# Qwen2.5-VL AWQ W4A16 离线与在线推理
 
 本文记录 nano-vllm 对 Hugging Face
 `Qwen/Qwen2.5-VL-3B-Instruct-AWQ` checkpoint 的第一版支持，包括权重格式、
-Linear 接入、Triton kernel、正确性和 BF16/AWQ 性能对比。
+Linear 接入、Triton kernel、离线/在线正确性和 BF16/AWQ 性能对比。
 
 ## 1. 当前支持范围
 
@@ -16,6 +16,8 @@ tensor_parallel_size: 1
 视觉塔: BF16，不量化
 文本 Decoder Linear: AWQ INT4 checkpoint
 离线单图: 已验证
+在线 native/SSE/OpenAI: 已验证
+在线 C1/C2/C4 profiling: 已验证
 ```
 
 本地模型入口：
@@ -386,3 +388,55 @@ INT4 权重会引入量化误差。早期 logits 排名接近时可能保持相�
 不是读取 `quantization_config`，而是正确处理 packed `qweight/qzeros/scales`、
 非线性 nibble 顺序，以及 merged QKV/gate-up 权重的 packed shard offset。格式
 正确后，kernel 才有优化意义。
+
+## 12. 在线 AWQ 实现与实测
+
+在线路径不复制一套量化服务。`AsyncLLMEngine` 在启动时加载 AWQ checkpoint 一次，
+之后继续复用 BF16 已有的 Scheduler、Paged KV Cache、continuous batching、SSE、
+取消和 OpenAI 协议。服务新增 `--awq-kernel`，并在 `/health` 和 profile JSON 中暴露：
+
+```text
+quantization: awq
+quantization_kernel: dequantize
+awq_online: true
+num_kvcache_blocks: 503
+```
+
+启动：
+
+```bash
+/home/agua/anaconda3/envs/yolo26/bin/python \
+  examples/qwen2_5_vl_server.py \
+  --model /home/agua/models/Qwen2.5-VL-3B-Instruct-AWQ \
+  --served-model-name /home/agua/models/Qwen2.5-VL-3B-Instruct-AWQ \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --max-model-len 4096 \
+  --max-num-seqs 4 \
+  --max-num-batched-tokens 4096 \
+  --gpu-memory-utilization 0.72 \
+  --max-concurrent-requests 4 \
+  --awq-kernel dequantize
+```
+
+同一 OpenAI SSE 客户端、`assets/dog.png`、每档 12 请求、固定生成 32 token：
+
+| C | 精度 | req/s | output tok/s | TTFT | TPOT | E2E |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | BF16 | 1.195 | 38.25 | 62.69 ms | 24.96 ms | 836.42 ms |
+| 1 | AWQ | 0.885 | 28.30 | 66.08 ms | 34.33 ms | 1130.41 ms |
+| 2 | BF16 | 1.688 | 54.01 | 77.64 ms | 35.70 ms | 1184.33 ms |
+| 2 | AWQ | 1.289 | 41.26 | 80.35 ms | 47.42 ms | 1550.27 ms |
+| 4 | BF16 | 2.074 | 66.38 | 152.77 ms | 57.20 ms | 1926.02 ms |
+| 4 | AWQ | 1.721 | 55.07 | 121.79 ms | 70.96 ms | 2321.70 ms |
+
+AWQ output throughput 相对 BF16 在 C1/C2/C4 分别为 `-26.0%/-23.6%/-17.0%`。
+它证明当前版本完成的是量化模型在线可用性和容量优化，不是生产级 W4A16 加速。
+详细机器可读结果：
+
+```text
+profiles/awq_online/nano-awq-c1-o32.json
+profiles/awq_online/nano-awq-c2-o32.json
+profiles/awq_online/nano-awq-c4-o32.json
+profiles/awq_online/summary.json
+```

@@ -12,6 +12,7 @@ from transformers import AutoProcessor
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from nanovllm import LLM, MultiModalPrompt, SamplingParams
+from nanovllm.attention import supported_encoder_attention_backends
 
 
 def parse_args():
@@ -31,14 +32,7 @@ def parse_args():
     parser.add_argument("--attention-backend", default="flash_attn")
     parser.add_argument(
         "--vision-attention-backend",
-        choices=[
-            "flash_attn",
-            "torch_sdpa",
-            "torch_math",
-            "cudnn_sdpa",
-            "triton",
-            "hybrid",
-        ],
+        choices=supported_encoder_attention_backends(),
         default="flash_attn",
     )
     parser.add_argument("--output-json")

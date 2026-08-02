@@ -11,6 +11,9 @@ namespace {
 
 constexpr int kThreads = 256;
 constexpr int kTile = 16;
+constexpr int kWarpSize = 32;
+constexpr int kAttentionWarps = 8;
+constexpr int kMaxAttentionHeadDim = 128;
 
 __inline__ __device__ float warp_reduce_sum(float value) {
   for (int offset = 16; offset > 0; offset /= 2) {
@@ -175,10 +178,138 @@ __global__ void matmul_bf16_kernel(
   }
 }
 
+// One block handles one packed sequence and one query head. Each warp owns a
+// query row and keeps the online-softmax state and output fragment in registers.
+// K/V are staged in shared memory because Qwen2.5-VL window attention has at
+// most 64 tokens per packed sequence.
+__global__ void packed_attention_bf16_kernel(
+    const __nv_bfloat16* query,
+    const __nv_bfloat16* key,
+    const __nv_bfloat16* value,
+    __nv_bfloat16* output,
+    const int32_t* cu_seqlens_q,
+    const int32_t* cu_seqlens_k,
+    int64_t stride_qt,
+    int64_t stride_qh,
+    int64_t stride_kt,
+    int64_t stride_kh,
+    int64_t stride_vt,
+    int64_t stride_vh,
+    int64_t stride_ot,
+    int64_t stride_oh,
+    int num_query_heads,
+    int num_kv_heads,
+    int head_dim,
+    int max_seqlen_k,
+    float softmax_scale,
+    bool causal) {
+  const int sequence = blockIdx.x / num_query_heads;
+  const int query_head = blockIdx.x % num_query_heads;
+  const int kv_group_size = num_query_heads / num_kv_heads;
+  const int kv_head = query_head / kv_group_size;
+  const int q_start = cu_seqlens_q[sequence];
+  const int q_length = cu_seqlens_q[sequence + 1] - q_start;
+  const int k_start = cu_seqlens_k[sequence];
+  const int k_length = cu_seqlens_k[sequence + 1] - k_start;
+  const int lane = threadIdx.x % kWarpSize;
+  const int warp = threadIdx.x / kWarpSize;
+
+  extern __shared__ __nv_bfloat16 shared_bf16[];
+  __nv_bfloat16* shared_key = shared_bf16;
+  __nv_bfloat16* shared_value =
+      shared_key + static_cast<int64_t>(max_seqlen_k) * head_dim;
+
+  const int packed_kv_elements = k_length * head_dim;
+  for (int index = threadIdx.x; index < packed_kv_elements;
+       index += blockDim.x) {
+    const int token = index / head_dim;
+    const int dim = index % head_dim;
+    shared_key[index] =
+        key[static_cast<int64_t>(k_start + token) * stride_kt +
+            static_cast<int64_t>(kv_head) * stride_kh + dim];
+    shared_value[index] =
+        value[static_cast<int64_t>(k_start + token) * stride_vt +
+              static_cast<int64_t>(kv_head) * stride_vh + dim];
+  }
+  __syncthreads();
+
+  constexpr int kValuesPerLane = kMaxAttentionHeadDim / kWarpSize;
+  for (int local_q = warp; local_q < q_length;
+       local_q += kAttentionWarps) {
+    float query_fragment[kValuesPerLane];
+    float output_accumulator[kValuesPerLane];
+    #pragma unroll
+    for (int index = 0; index < kValuesPerLane; ++index) {
+      const int dim = lane + index * kWarpSize;
+      query_fragment[index] = dim < head_dim
+          ? __bfloat162float(
+                query[static_cast<int64_t>(q_start + local_q) * stride_qt +
+                      static_cast<int64_t>(query_head) * stride_qh + dim])
+          : 0.0f;
+      output_accumulator[index] = 0.0f;
+    }
+
+    float row_max = -std::numeric_limits<float>::infinity();
+    float row_sum = 0.0f;
+    int key_limit = k_length;
+    if (causal && local_q + 1 < key_limit) {
+      key_limit = local_q + 1;
+    }
+    for (int local_k = 0; local_k < key_limit; ++local_k) {
+      float partial_dot = 0.0f;
+      #pragma unroll
+      for (int index = 0; index < kValuesPerLane; ++index) {
+        const int dim = lane + index * kWarpSize;
+        if (dim < head_dim) {
+          partial_dot += query_fragment[index] * __bfloat162float(
+              shared_key[local_k * head_dim + dim]);
+        }
+      }
+      float score = warp_reduce_sum(partial_dot);
+      score = __shfl_sync(0xffffffff, score, 0) * softmax_scale;
+      const float new_max = fmaxf(row_max, score);
+      const float previous_correction = expf(row_max - new_max);
+      const float probability_numerator = expf(score - new_max);
+      #pragma unroll
+      for (int index = 0; index < kValuesPerLane; ++index) {
+        const int dim = lane + index * kWarpSize;
+        if (dim < head_dim) {
+          const float value_element = __bfloat162float(
+              shared_value[local_k * head_dim + dim]);
+          output_accumulator[index] =
+              output_accumulator[index] * previous_correction +
+              probability_numerator * value_element;
+        }
+      }
+      row_sum = row_sum * previous_correction + probability_numerator;
+      row_max = new_max;
+    }
+
+    const float inverse_sum = 1.0f / row_sum;
+    #pragma unroll
+    for (int index = 0; index < kValuesPerLane; ++index) {
+      const int dim = lane + index * kWarpSize;
+      if (dim < head_dim) {
+        output[static_cast<int64_t>(q_start + local_q) * stride_ot +
+               static_cast<int64_t>(query_head) * stride_oh + dim] =
+            __float2bfloat16(output_accumulator[index] * inverse_sum);
+      }
+    }
+  }
+}
+
 void check_bf16_cuda_contiguous(const torch::Tensor& tensor, const char* name) {
   TORCH_CHECK(tensor.is_cuda(), name, " must be a CUDA tensor");
   TORCH_CHECK(tensor.is_contiguous(), name, " must be contiguous");
   TORCH_CHECK(tensor.scalar_type() == torch::kBFloat16, name, " must be BF16");
+}
+
+void check_bf16_cuda_last_dim_contiguous(
+    const torch::Tensor& tensor,
+    const char* name) {
+  TORCH_CHECK(tensor.is_cuda(), name, " must be a CUDA tensor");
+  TORCH_CHECK(tensor.scalar_type() == torch::kBFloat16, name, " must be BF16");
+  TORCH_CHECK(tensor.stride(-1) == 1, name, " last dimension must be contiguous");
 }
 
 }  // namespace
@@ -262,6 +393,89 @@ torch::Tensor nanovllm_matmul_cuda(torch::Tensor a, torch::Tensor b) {
       M,
       N,
       K);
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  return output;
+}
+
+torch::Tensor nanovllm_packed_attention_cuda(
+    torch::Tensor query,
+    torch::Tensor key,
+    torch::Tensor value,
+    torch::Tensor cu_seqlens_q,
+    torch::Tensor cu_seqlens_k,
+    int64_t max_seqlen_q,
+    int64_t max_seqlen_k,
+    double softmax_scale,
+    bool causal) {
+  check_bf16_cuda_last_dim_contiguous(query, "query");
+  check_bf16_cuda_last_dim_contiguous(key, "key");
+  check_bf16_cuda_last_dim_contiguous(value, "value");
+  TORCH_CHECK(
+      query.dim() == 3 && key.dim() == 3 && value.dim() == 3,
+      "query, key and value must have shape [tokens, heads, dim]");
+  TORCH_CHECK(key.sizes() == value.sizes(), "key/value shape mismatch");
+  TORCH_CHECK(query.size(2) == key.size(2), "Q/KV head_dim mismatch");
+  TORCH_CHECK(
+      query.size(1) % key.size(1) == 0,
+      "query heads must be divisible by KV heads");
+  TORCH_CHECK(
+      query.size(2) > 0 && query.size(2) <= kMaxAttentionHeadDim,
+      "CUDA fused attention requires 1 <= head_dim <= ",
+      kMaxAttentionHeadDim);
+  TORCH_CHECK(
+      max_seqlen_q > 0 && max_seqlen_q <= 64 &&
+          max_seqlen_k > 0 && max_seqlen_k <= 64,
+      "CUDA fused attention requires max sequence length <= 64");
+  TORCH_CHECK(
+      cu_seqlens_q.is_cuda() && cu_seqlens_k.is_cuda(),
+      "cu_seqlens must be CUDA tensors");
+  TORCH_CHECK(
+      cu_seqlens_q.is_contiguous() && cu_seqlens_k.is_contiguous(),
+      "cu_seqlens must be contiguous");
+  TORCH_CHECK(
+      cu_seqlens_q.scalar_type() == torch::kInt32 &&
+          cu_seqlens_k.scalar_type() == torch::kInt32,
+      "cu_seqlens must use int32");
+  TORCH_CHECK(
+      cu_seqlens_q.dim() == 1 &&
+          cu_seqlens_q.numel() == cu_seqlens_k.numel() &&
+          cu_seqlens_q.numel() >= 2,
+      "Q/KV cu_seqlens shape mismatch");
+
+  const int num_sequences = cu_seqlens_q.numel() - 1;
+  const int num_query_heads = query.size(1);
+  const int num_kv_heads = key.size(1);
+  const int head_dim = query.size(2);
+  const int blocks = num_sequences * num_query_heads;
+  const size_t shared_bytes =
+      2 * max_seqlen_k * head_dim * sizeof(__nv_bfloat16);
+  auto output = torch::empty_like(query);
+  packed_attention_bf16_kernel<<<
+      blocks,
+      kThreads,
+      shared_bytes,
+      at::cuda::getCurrentCUDAStream()>>>(
+      reinterpret_cast<const __nv_bfloat16*>(
+          query.data_ptr<at::BFloat16>()),
+      reinterpret_cast<const __nv_bfloat16*>(key.data_ptr<at::BFloat16>()),
+      reinterpret_cast<const __nv_bfloat16*>(value.data_ptr<at::BFloat16>()),
+      reinterpret_cast<__nv_bfloat16*>(output.data_ptr<at::BFloat16>()),
+      cu_seqlens_q.data_ptr<int32_t>(),
+      cu_seqlens_k.data_ptr<int32_t>(),
+      query.stride(0),
+      query.stride(1),
+      key.stride(0),
+      key.stride(1),
+      value.stride(0),
+      value.stride(1),
+      output.stride(0),
+      output.stride(1),
+      num_query_heads,
+      num_kv_heads,
+      head_dim,
+      max_seqlen_k,
+      static_cast<float>(softmax_scale),
+      causal);
   C10_CUDA_KERNEL_LAUNCH_CHECK();
   return output;
 }

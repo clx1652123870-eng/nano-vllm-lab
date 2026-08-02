@@ -5,6 +5,9 @@ from nanovllm.attention.base import (
 
 
 _ALIASES = {
+    "cuda": "cuda_fused",
+    "cuda_flash": "cuda_fused",
+    "custom_cuda": "cuda_fused",
     "cudnn": "cudnn_sdpa",
     "flash": "flash_attn",
     "flash_attention": "flash_attn",
@@ -16,6 +19,8 @@ _ALIASES = {
 }
 
 _ENCODER_BACKENDS = (
+    "cuda_fused",
+    "cuda_hybrid",
     "cudnn_sdpa",
     "flash_attn",
     "hybrid",
@@ -43,6 +48,14 @@ def create_encoder_attention_backend(name: str) -> EncoderAttentionBackend:
         from nanovllm.attention.flash_attn import FlashAttentionEncoderBackend
 
         return FlashAttentionEncoderBackend()
+    if normalized == "cuda_fused":
+        from nanovllm.attention.cuda_attn import CUDAFusedAttentionEncoderBackend
+
+        return CUDAFusedAttentionEncoderBackend()
+    if normalized == "cuda_hybrid":
+        from nanovllm.attention.cuda_attn import CUDAHybridEncoderAttentionBackend
+
+        return CUDAHybridEncoderAttentionBackend()
     if normalized == "cudnn_sdpa":
         from nanovllm.attention.torch_sdpa import CUDNNSDPAEncoderBackend
 

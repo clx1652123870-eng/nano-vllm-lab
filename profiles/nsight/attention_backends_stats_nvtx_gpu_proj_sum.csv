@@ -1,0 +1,9 @@
+Range,Style,Total Proj Time (ns),Total Range Time (ns),Range Instances,Proj Avg (ns),Proj Med (ns),Proj Min (ns),Proj Max (ns),Proj StdDev (ns),Total GPU Ops,Avg GPU Ops,Avg Range Lvl,Avg Num Child
+:attention::torch_math::measured,PushPop,165837586,165922444,1,165837586.0,165837586.0,165837586,165837586,0.0,21620,21620.0,0.0,10.0
+:attention::torch_math::iteration,PushPop,165527698,165843253,10,16552769.8,16622756.5,16205430,16837940,224573.8,21620,2162.0,1.0,0.0
+:attention::torch_sdpa::measured,PushPop,51180764,51247121,1,51180764.0,51180764.0,51180764,51180764,0.0,2900,2900.0,0.0,10.0
+:attention::torch_sdpa::iteration,PushPop,50972925,51176060,10,5097292.5,5062019.0,5004211,5258227,93549.8,2900,290.0,1.0,0.0
+:attention::cuda_fused::measured,PushPop,10738948,10758985,1,10738948.0,10738948.0,10738948,10738948,0.0,10,10.0,0.0,10.0
+:attention::cuda_fused::iteration,PushPop,10732068,77500,10,1073206.8,1013309.0,1012222,1327965,127135.3,10,1.0,1.0,0.0
+:attention::triton::measured,PushPop,922685,1048724,1,922685.0,922685.0,922685,922685,0.0,10,10.0,0.0,10.0
+:attention::triton::iteration,PushPop,920253,356072,10,92025.3,92079.5,90592,92991,719.8,10,1.0,1.0,0.0

@@ -1,0 +1,53 @@
+{
+  "workload": {
+    "image": "assets/dog.png",
+    "case": "window",
+    "tokens": 8100,
+    "packed_sequences": 144,
+    "sequence_lengths": [
+      4,
+      16,
+      64
+    ],
+    "iterations": 10
+  },
+  "backends": {
+    "torch_math": {
+      "range_instances": 10,
+      "gpu_projected_time_ms_per_iteration": 16.5527698,
+      "cpu_range_time_us_per_iteration": 16584.3253,
+      "gpu_operations_per_iteration": 2162.0,
+      "gpu_time_over_triton": 179.871946084392
+    },
+    "torch_sdpa": {
+      "range_instances": 10,
+      "gpu_projected_time_ms_per_iteration": 5.0972925,
+      "cpu_range_time_us_per_iteration": 5117.606,
+      "gpu_operations_per_iteration": 290.0,
+      "gpu_time_over_triton": 55.39012097760072
+    },
+    "cuda_fused": {
+      "range_instances": 10,
+      "gpu_projected_time_ms_per_iteration": 1.0732068000000001,
+      "cpu_range_time_us_per_iteration": 7.75,
+      "gpu_operations_per_iteration": 1.0,
+      "gpu_time_over_triton": 11.66208423118425
+    },
+    "triton": {
+      "range_instances": 10,
+      "gpu_projected_time_ms_per_iteration": 0.0920253,
+      "cpu_range_time_us_per_iteration": 35.6072,
+      "gpu_operations_per_iteration": 1.0,
+      "gpu_time_over_triton": 1.0
+    }
+  },
+  "source": {
+    "nsys_report": "profiles/nsight/attention_backends.nsys-rep",
+    "nvtx_gpu_projection_csv": "profiles/nsight/attention_backends_stats_nvtx_gpu_proj_sum.csv"
+  },
+  "notes": [
+    "GPU projected time is measured inside each NVTX iteration range.",
+    "GPU operations count includes kernels and memory operations.",
+    "Nsight instrumentation changes absolute latency; use ratios and launch structure for diagnosis."
+  ]
+}

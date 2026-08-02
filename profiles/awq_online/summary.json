@@ -1,0 +1,137 @@
+{
+  "workload": {
+    "image": "assets/dog.png",
+    "output_tokens": 32,
+    "concurrencies": [
+      1,
+      2,
+      4
+    ],
+    "request_count_per_case": 12,
+    "awq_kernel": "dequantize"
+  },
+  "comparisons": {
+    "c1": {
+      "completed_requests": 12,
+      "metrics": {
+        "request_throughput": {
+          "bf16": 1.1952982925129565,
+          "awq": 0.8845027740282232,
+          "awq_over_bf16": 0.7399849724278224,
+          "awq_delta_percent": -26.001502757217764
+        },
+        "output_throughput": {
+          "bf16": 38.24954536041461,
+          "awq": 28.304088768903142,
+          "awq_over_bf16": 0.7399849724278224,
+          "awq_delta_percent": -26.001502757217764
+        },
+        "mean_ttft_ms": {
+          "bf16": 62.68875262079139,
+          "awq": 66.08077449103196,
+          "awq_over_bf16": 1.0541089386601636,
+          "awq_delta_percent": 5.410893866016364
+        },
+        "mean_tpot_ms": {
+          "bf16": 24.959178066872536,
+          "awq": 34.33319467735747,
+          "awq_over_bf16": 1.3755739305745307,
+          "awq_delta_percent": 37.55739305745307
+        },
+        "mean_e2el_ms": {
+          "bf16": 836.4232726938402,
+          "awq": 1130.4098094891135,
+          "awq_over_bf16": 1.3514805797409735,
+          "awq_delta_percent": 35.14805797409735
+        }
+      },
+      "source": {
+        "bf16": "profiles/framework_comparison/nano-c1-o32.json",
+        "awq": "profiles/awq_online/nano-awq-c1-o32.json"
+      }
+    },
+    "c2": {
+      "completed_requests": 12,
+      "metrics": {
+        "request_throughput": {
+          "bf16": 1.6876907891619526,
+          "awq": 1.2892851339071512,
+          "awq_over_bf16": 0.7639344494777769,
+          "awq_delta_percent": -23.606555052222312
+        },
+        "output_throughput": {
+          "bf16": 54.00610525318248,
+          "awq": 41.25712428502884,
+          "awq_over_bf16": 0.7639344494777769,
+          "awq_delta_percent": -23.606555052222312
+        },
+        "mean_ttft_ms": {
+          "bf16": 77.6405087672174,
+          "awq": 80.35263283333431,
+          "awq_over_bf16": 1.034931817284305,
+          "awq_delta_percent": 3.4931817284304945
+        },
+        "mean_tpot_ms": {
+          "bf16": 35.69973455316397,
+          "awq": 47.41676621169092,
+          "awq_over_bf16": 1.3282106101119036,
+          "awq_delta_percent": 32.82106101119035
+        },
+        "mean_e2el_ms": {
+          "bf16": 1184.3322799153004,
+          "awq": 1550.272385395753,
+          "awq_over_bf16": 1.308984321111828,
+          "awq_delta_percent": 30.898432111182792
+        }
+      },
+      "source": {
+        "bf16": "profiles/framework_comparison/nano-c2-o32.json",
+        "awq": "profiles/awq_online/nano-awq-c2-o32.json"
+      }
+    },
+    "c4": {
+      "completed_requests": 12,
+      "metrics": {
+        "request_throughput": {
+          "bf16": 2.074387370815474,
+          "awq": 1.7207875083295865,
+          "awq_over_bf16": 0.8295401006288994,
+          "awq_delta_percent": -17.04598993711006
+        },
+        "output_throughput": {
+          "bf16": 66.38039586609517,
+          "awq": 55.06520026654677,
+          "awq_over_bf16": 0.8295401006288994,
+          "awq_delta_percent": -17.04598993711006
+        },
+        "mean_ttft_ms": {
+          "bf16": 152.76614134199917,
+          "awq": 121.78542104084045,
+          "awq_over_bf16": 0.797201657193122,
+          "awq_delta_percent": -20.2798342806878
+        },
+        "mean_tpot_ms": {
+          "bf16": 57.20181966961551,
+          "awq": 70.96487817840192,
+          "awq_over_bf16": 1.240605256760688,
+          "awq_delta_percent": 24.0605256760688
+        },
+        "mean_e2el_ms": {
+          "bf16": 1926.0225511000801,
+          "awq": 2321.696644571299,
+          "awq_over_bf16": 1.2054358570439496,
+          "awq_delta_percent": 20.543585704394964
+        }
+      },
+      "source": {
+        "bf16": "profiles/framework_comparison/nano-c4-o32.json",
+        "awq": "profiles/awq_online/nano-awq-c4-o32.json"
+      }
+    }
+  },
+  "notes": [
+    "BF16 and AWQ runs use the same OpenAI-compatible SSE benchmark.",
+    "AWQ reduces stored weight bytes but dequantizes before every Linear.",
+    "Lower latency and higher throughput are better; interpret delta signs accordingly."
+  ]
+}

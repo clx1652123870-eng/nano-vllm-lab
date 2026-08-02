@@ -21,9 +21,9 @@ DecoderAttentionBackend
 
 当前支持矩阵：
 
-| 场景 | flash_attn | torch_sdpa | torch_math | cudnn_sdpa | triton | hybrid |
+| 场景 | flash_attn | torch_sdpa/math/cuDNN | triton | cuda_fused | hybrid | cuda_hybrid |
 | --- | --- | --- | --- | --- | --- | --- |
-| Vision Encoder packed varlen | 支持 | 支持，自动调度 | 支持，强制 Math | 支持，强制 cuDNN | 支持，实验 kernel | 支持，按长度分派 |
+| Vision Encoder packed varlen | 支持 | 支持 | 支持，实验 kernel | 支持，短序列 | Triton/Flash 分派 | CUDA/Flash 分派 |
 | Text Decoder causal prefill | 支持 | 不支持 | 不支持 | 不支持 | 不支持 | 不支持 |
 | Text Decoder paged-KV decode | 支持 | 不支持 | 不支持 | 不支持 | 不支持 | 不支持 |
 
@@ -104,6 +104,10 @@ nanovllm/attention/triton_attn.py
 nanovllm/attention/hybrid.py
     短窗口选择 Triton
     长序列选择外部 FlashAttention
+
+nanovllm/attention/cuda_attn.py
+    cuda_fused: 项目内短序列 fused CUDA kernel
+    cuda_hybrid: 短序列选择 CUDA，长序列选择外部 FlashAttention
 
 nanovllm/layers/attention.py
     文本 Decoder Attention
@@ -218,7 +222,7 @@ decode(
 这是第一版清晰的所有权边界。后续若要融合 RoPE、cache write 和 decode
 Attention，需要扩展 backend 接口，而不是在模型文件里添加特殊分支。
 
-## 5. 四个具体后端
+## 5. 具体后端
 
 ### 5.1 FlashAttention
 
@@ -307,6 +311,17 @@ Paged KV Cache decode。
 ```text
 docs/attention_backend_benchmark.md
 ```
+
+### 5.5 项目内 CUDA fused Attention
+
+`CUDAFusedAttentionEncoderBackend` 直接消费 packed Q/K/V。一个 CUDA block 处理
+一个 `(sequence, query_head)`，在 shared memory 中保存 K/V，并在寄存器中维护
+online softmax 的 `row_max`、`row_sum` 和输出累加器。它融合 QK、scale、causal
+mask、softmax 和 PV，不物化完整 score matrix，并支持 GQA。
+
+当前实现面向教学和三方对比：只支持 CUDA BF16、`head_dim <= 128`、
+`max_seqlen <= 64`，内部使用 FP32 scalar FMA，没有使用 WMMA/Tensor Core。
+`cuda_hybrid` 在短窗口调用该 kernel，长序列回退外部 FlashAttention。
 
 ## 6. 配置和运行
 
@@ -538,7 +553,7 @@ RoPE/Attention 之间的 launch 开销重要，再扩展接口做融合。
 
 同时 factory 会拒绝能力不匹配的 Decoder 配置，而不是静默 fallback。
 
-## 10. 下一步
+## 10. 阶段结论
 
 抽象和第一轮 benchmark 已完成：
 
@@ -556,9 +571,17 @@ Vision 真实 shape:
     vLLM TPOT 和吞吐更好
 
 AWQ:
-    INT4 checkpoint 已可离线推理
+    INT4 checkpoint 已可离线和在线推理
     当前省权重显存但 decode 慢于 BF16
 ```
 
-所以下一步先 profile Decoder 的 C1/C4 时间线，再根据 kernel 与 CPU gap 占比
-决定优化 Paged Attention、scheduler、sampling 或专用 AWQ W4A16 kernel。
+后续三方实测已经完成。Window shape 下 P50 为 PyTorch Math `10.917 ms`、
+PyTorch SDPA `2.548 ms`、项目内 CUDA fused `1.080 ms`、Triton fused
+`0.119 ms`。Triton 相对三者分别为 `91.39x`、`21.33x`、`9.04x`；Full
+Attention 则继续由外部 FlashAttention 更合适。完整数据、Nsight 证据和表述边界见：
+
+```text
+profiles/attention_pytorch_cuda_triton_rtx5080.json
+profiles/nsight/attention_backends_summary.json
+docs/nano_vllm_qwen2_5_vl_interview_guide.md
+```

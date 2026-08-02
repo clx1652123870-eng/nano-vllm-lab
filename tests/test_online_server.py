@@ -127,6 +127,20 @@ class OnlineServerTest(unittest.TestCase):
         self.assertEqual(body["usage"]["total_tokens"], 4)
         self.assertEqual(server.app.state.limiter.stats()["in_flight"], 0)
 
+    def test_health_exposes_awq_runtime(self):
+        server.app.state.config.quantization = "awq"
+        server.app.state.config.quantization_kernel = "dequantize"
+        response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["capabilities"]["awq_online"])
+        self.assertEqual(body["limits"]["quantization"], "awq")
+        self.assertEqual(
+            body["limits"]["quantization_kernel"],
+            "dequantize",
+        )
+
     def test_native_sse_emits_metadata_token_and_done(self):
         response = self.client.post(
             "/generate_stream",

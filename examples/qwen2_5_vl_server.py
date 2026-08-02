@@ -4,6 +4,7 @@ import base64
 import binascii
 import io
 import json
+import os
 import sys
 import threading
 import uuid
@@ -28,7 +29,10 @@ from nanovllm import (
     MultiModalPrompt,
     SamplingParams,
 )
-from nanovllm.attention import normalize_attention_backend_name
+from nanovllm.attention import (
+    normalize_attention_backend_name,
+    supported_encoder_attention_backends,
+)
 
 
 class GenerateRequest(BaseModel):
@@ -111,6 +115,8 @@ class ServerConfig(BaseModel):
     request_timeout_seconds: float
     attention_backend: str = "flash_attn"
     vision_attention_backend: str = "flash_attn"
+    quantization: str | None = None
+    quantization_kernel: str | None = None
 
 
 class ConcurrencyLimiter:
@@ -162,18 +168,16 @@ def parse_args():
     parser.add_argument("--attention-backend", default="flash_attn")
     parser.add_argument(
         "--vision-attention-backend",
-        choices=[
-            "flash_attn",
-            "torch_sdpa",
-            "torch_math",
-            "cudnn_sdpa",
-            "triton",
-            "hybrid",
-        ],
+        choices=supported_encoder_attention_backends(),
         default="flash_attn",
     )
     parser.add_argument("--max-concurrent-requests", type=int, default=16)
     parser.add_argument("--request-timeout-seconds", type=float, default=300.0)
+    parser.add_argument(
+        "--awq-kernel",
+        choices=["dequantize", "triton_fused"],
+        default=os.getenv("NANOVLLM_AWQ_KERNEL", "dequantize"),
+    )
     return parser.parse_args()
 
 
@@ -191,6 +195,7 @@ def setup_engine(args):
     vision_attention_backend = normalize_attention_backend_name(
         args.vision_attention_backend
     )
+    os.environ["NANOVLLM_AWQ_KERNEL"] = args.awq_kernel
     engine = AsyncLLMEngine(
         args.model,
         enforce_eager=True,
@@ -204,6 +209,7 @@ def setup_engine(args):
     )
 
     served_model_name = args.served_model_name or Path(args.model).name
+    model_metadata = engine.model_metadata
     app.state.processor = processor
     app.state.processor_lock = threading.Lock()
     app.state.engine = engine
@@ -219,6 +225,8 @@ def setup_engine(args):
         request_timeout_seconds=args.request_timeout_seconds,
         attention_backend=attention_backend,
         vision_attention_backend=vision_attention_backend,
+        quantization=model_metadata.get("quantization"),
+        quantization_kernel=model_metadata.get("quantization_kernel"),
     )
     app.state.startup = {
         "processor_load_ms": processor_load_ms,
@@ -239,6 +247,7 @@ def health():
             "openai_chat_completions": True,
             "openai_sse": True,
             "request_cancellation": True,
+            "awq_online": app.state.config.quantization == "awq",
         },
         "limits": app.state.config.model_dump(),
         "concurrency": app.state.limiter.stats(),

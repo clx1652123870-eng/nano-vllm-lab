@@ -308,3 +308,59 @@ Vision Attention 只是视觉塔的一部分，而且 Window Attention 仅是其
 后端选择按真实 shape、数值误差和端到端收益决定。当前 Matmul 是
 PyTorch/cuBLAS 更快，Softmax/RMSNorm 也只在个别 shape 胜出。无条件替换会造成
 性能回退，并增加维护成本。
+
+## 12. 自定义 CUDA Attention 与最终三方对比
+
+项目新增 `nanovllm/attention/cuda_attn.py` 和
+`nanovllm/kernels/csrc/kernels.cu::packed_attention_bf16_kernel`。该 CUDA kernel：
+
+```text
+输入: packed-varlen BF16 Q/K/V + cu_seqlens
+调度: 一个 block 处理一个 (sequence, query head)，8 warps
+融合: QK + scale + causal mask + online softmax + PV
+中间状态: K/V 放 shared memory，softmax 和 output accumulator 放寄存器
+能力: GQA、causal/non-causal、head_dim <= 128、sequence <= 64
+```
+
+它不物化 `S x S` score matrix，但内部是 FP32 scalar FMA，没有 WMMA/Tensor Core，
+所以是可解释的 CUDA fused baseline。`cuda_hybrid` 在长序列自动回退外部
+FlashAttention，避免把短窗口 kernel 错用到 8100-token Full Attention。
+
+RTX 5080、BF16、`assets/dog.png`、5 warmup、20 measure 的正式 P50：
+
+| Window backend | P50 | 相对 Triton |
+| --- | ---: | ---: |
+| PyTorch Math | 10.917 ms | 91.39x |
+| PyTorch SDPA | 2.548 ms | 21.33x |
+| 自定义 CUDA fused | 1.080 ms | 9.04x |
+| 自定义 Triton fused | **0.119 ms** | 1.00x |
+| 外部 FlashAttention | 0.124 ms | 1.04x |
+
+Full Attention 的 Triton、外部 FlashAttention P50 分别为 `5.937 ms` 和
+`4.361 ms`，因此生产选择仍是 shape-aware Hybrid：短窗口 Triton，长序列外部
+FlashAttention。注意 `91.39x/21.33x/9.04x` 都是 Attention 子项微基准，不是
+整个 Qwen2.5-VL 的端到端加速比。
+
+Nsight Systems 用 NVTX range 验证了差距来源：
+
+| Backend | GPU projected time/iter | GPU operations/iter |
+| --- | ---: | ---: |
+| PyTorch Math | 16.553 ms | 2162 |
+| PyTorch SDPA | 5.097 ms | 290 |
+| CUDA fused | 1.073 ms | 1 |
+| Triton fused | **0.092 ms** | **1** |
+
+PyTorch 的主要问题是 packed adapter 和多算子 launch；CUDA/Triton 都只有一个
+operation 后，`11.66x` 的差距来自 kernel 内部实现，下一步应分析 Tensor Core、
+occupancy、寄存器、shared memory 和 warp stall，而不是继续减少 launch。当前 NCU
+由于 `ERR_NVGPUCTRPERM` 无法读取硬件 counter，未虚构 NCU 数值。
+
+结果与复现入口：
+
+```text
+profiles/attention_pytorch_cuda_triton_rtx5080.json
+profiles/nsight/attention_backends_summary.json
+profiles/nsight/attention_backends.nsys-rep
+benchmarks/nsight_attention_workload.py
+docs/nano_vllm_qwen2_5_vl_interview_guide.md
+```

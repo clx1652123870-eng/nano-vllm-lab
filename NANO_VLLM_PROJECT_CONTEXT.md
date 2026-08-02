@@ -1,6 +1,6 @@
 # Nano-vLLM 项目上下文与后续开发交接
 
-> 更新时间：2026-07-30
+> 更新时间：2026-08-01
 > 用途：在新的 Codex 对话中快速恢复项目背景、代码现状、技术决策和后续计划。
 > 工作目录：`/home/agua/tensorrtlearning/nano-vllm`
 
@@ -51,13 +51,18 @@
 - AWQ packed 权重加载、Triton 反量化和实验性 fused W4A16 GEMM。
 - AWQ 与外部 vLLM 的前 4 个 greedy token 对齐。
 - BF16/AWQ 权重显存、KV Cache 容量、TTFT、TPOT 和 E2E 对比。
+- Qwen2.5-VL AWQ native/SSE/OpenAI 在线推理和 C1/C2/C4 profile。
+- 短窗口 packed-varlen 自定义 CUDA fused Attention。
+- PyTorch/CUDA/Triton Attention 三方真实 shape 对比。
+- 带 NVTX 标记的 Nsight Systems workload、报告和 JSON 摘要。
+- 总结性面试指南和全部关键数据索引。
 
 当前尚未完成：
 
 - 同一个 prefill batch 中处理多张图片。
 - API 进程与 EngineCore 进程拆分。
 - Decoder 非 FlashAttention 参考/优化 backend。
-- Decoder 路径的 Nsight Systems/Compute 定位。
+- Decoder 路径的 Nsight Compute hardware-counter 定位。
 - 生产级 AWQ fused INT4 GEMM。
 - 已胜出的 CUDA/Triton kernel 端到端替换与复测。
 
@@ -81,7 +86,11 @@ EngineCore 进程拆分：未实现
 Hybrid Vision Attention：已实现，端到端 TTFT 收益接近测量噪声
 基础 CUDA/Triton 算子：已实现并完成真实 shape 微基准
 AWQ：单 GPU W4A16 checkpoint 加载、离线推理和 profiling 已完成
+AWQ 在线 native/SSE/OpenAI 与 C1/C2/C4 profiling：已完成
 AWQ Triton fused GEMM：正确但慢于反量化 + cuBLAS，默认不启用
+自定义 CUDA fused Vision Attention：已完成短窗口实现和真实模型 smoke
+PyTorch/CUDA/Triton 三方 Attention 对比：已完成
+Nsight Systems Attention 时间线分析：已完成
 ```
 
 ## 2. 最终项目目标
@@ -2340,4 +2349,50 @@ profiles/operator_comparison/nano-dog-o32.json
 profiles/operator_comparison/vllm-dog-o1.json
 profiles/operator_comparison/vllm-dog-o32.json
 profiles/operator_comparison/summary.json
+```
+
+## 36. 2026-08-01 最终阶段实现记录
+
+本阶段补齐了三个交付项。
+
+第一，AWQ 已接入在线服务。`AsyncLLMEngine` 在模型加载后记录量化格式、kernel、
+KV blocks 和 Attention backend；`/health` 与 profile JSON 都能确认实际运行配置。
+native、native SSE、OpenAI 非流式和 OpenAI SSE 均已实际验证。C1/C2/C4 output
+throughput 为 `28.30/41.26/55.07 tok/s`，对应 BF16 为
+`38.25/54.01/66.38 tok/s`。当前 AWQ 的价值是权重容量降低和更大的 KV Cache，
+不是速度领先。
+
+第二，新增项目内 packed-varlen BF16 CUDA fused Attention：
+
+```text
+nanovllm/attention/cuda_attn.py
+nanovllm/kernels/csrc/kernels.cu::packed_attention_bf16_kernel
+```
+
+它融合 QK、scale、mask、online softmax 和 PV，支持 GQA 及真实模型产生的 strided
+Q/K/V view，限制为 `head_dim <= 128`、`sequence <= 64`。长序列由
+`cuda_hybrid` 回退外部 FlashAttention。真实模型 smoke 的前 4 个 greedy token 为
+`[108893, 45930, 101987, 99593]`。
+
+第三，完成 PyTorch/CUDA/Triton 三方微基准和 Nsight Systems 分析。Window P50：
+
+```text
+PyTorch Math  10.917 ms
+PyTorch SDPA   2.548 ms
+CUDA fused     1.080 ms
+Triton fused   0.119 ms
+```
+
+Triton 相对前三者为 `91.39x/21.33x/9.04x`。Nsight NVTX GPU projection 中，
+Math/SDPA/CUDA/Triton 每次迭代分别有 `2162/290/1/1` 个 GPU operation；CUDA 与
+Triton launch 数相同后仍相差 `11.66x`，说明下一层优化应针对 Tensor Core、tiling、
+occupancy 和 pipeline。NCU 因 `ERR_NVGPUCTRPERM` 未采集硬件 counter。
+
+最终阅读入口：
+
+```text
+docs/nano_vllm_qwen2_5_vl_interview_guide.md
+profiles/attention_pytorch_cuda_triton_rtx5080.json
+profiles/awq_online/summary.json
+profiles/nsight/attention_backends_summary.json
 ```

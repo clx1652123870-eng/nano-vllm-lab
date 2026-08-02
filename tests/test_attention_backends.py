@@ -63,6 +63,8 @@ class AttentionBackendFactoryTest(unittest.TestCase):
         self.assertEqual(
             supported_encoder_attention_backends(),
             (
+                "cuda_fused",
+                "cuda_hybrid",
                 "cudnn_sdpa",
                 "flash_attn",
                 "hybrid",
@@ -74,6 +76,10 @@ class AttentionBackendFactoryTest(unittest.TestCase):
         self.assertEqual(
             create_decoder_attention_backend("flash").name,
             "flash_attn",
+        )
+        self.assertEqual(
+            create_encoder_attention_backend("custom-cuda").name,
+            "cuda_fused",
         )
         self.assertEqual(
             create_encoder_attention_backend("torch").name,
@@ -108,6 +114,8 @@ class AttentionBackendFactoryTest(unittest.TestCase):
         modules = [
             Qwen2_5_VisionAttention(config, backend)
             for backend in (
+                "cuda_fused",
+                "cuda_hybrid",
                 "flash_attn",
                 "torch_sdpa",
                 "torch_math",
@@ -206,6 +214,76 @@ class TorchSDPAEncoderBackendTest(unittest.TestCase):
                 causal=False,
             )
 
+
+@unittest.skipUnless(torch.cuda.is_available(), "CUDA is required")
+class CUDAFusedAttentionEncoderBackendTest(unittest.TestCase):
+    def setUp(self):
+        torch.manual_seed(17)
+        self.backend = create_encoder_attention_backend("cuda_fused")
+        self.cu_seqlens = torch.tensor(
+            [0, 4, 7],
+            dtype=torch.int32,
+            device="cuda",
+        )
+        qkv = torch.randn(
+            7,
+            64,
+            dtype=torch.bfloat16,
+            device="cuda",
+        )
+        query, key, value = qkv.split((32, 16, 16), dim=-1)
+        self.query = query.view(7, 4, 8)
+        self.key = key.view(7, 2, 8)
+        self.value = value.view(7, 2, 8)
+        self.assertFalse(self.query.is_contiguous())
+        self.assertFalse(self.key.is_contiguous())
+        self.assertFalse(self.value.is_contiguous())
+        self.scale = 1.0 / math.sqrt(self.query.size(-1))
+
+    def run_backend(self, causal):
+        return self.backend.forward(
+            self.query,
+            self.key,
+            self.value,
+            cu_seqlens_q=self.cu_seqlens,
+            cu_seqlens_k=self.cu_seqlens,
+            max_seqlen_q=4,
+            max_seqlen_k=4,
+            softmax_scale=self.scale,
+            causal=causal,
+        )
+
+    def assert_matches_reference(self, causal):
+        actual = self.run_backend(causal)
+        expected = reference_packed_attention(
+            self.query,
+            self.key,
+            self.value,
+            self.cu_seqlens,
+            scale=self.scale,
+            causal=causal,
+        )
+        torch.testing.assert_close(actual, expected, rtol=0.02, atol=0.02)
+
+    def test_packed_noncausal_gqa_matches_reference(self):
+        self.assert_matches_reference(causal=False)
+
+    def test_packed_causal_gqa_matches_reference(self):
+        self.assert_matches_reference(causal=True)
+
+    def test_rejects_long_sequence(self):
+        with self.assertRaisesRegex(ValueError, "sequence lengths <= 64"):
+            self.backend.forward(
+                self.query,
+                self.key,
+                self.value,
+                cu_seqlens_q=self.cu_seqlens,
+                cu_seqlens_k=self.cu_seqlens,
+                max_seqlen_q=65,
+                max_seqlen_k=65,
+                softmax_scale=self.scale,
+                causal=False,
+            )
 
 if __name__ == "__main__":
     unittest.main()

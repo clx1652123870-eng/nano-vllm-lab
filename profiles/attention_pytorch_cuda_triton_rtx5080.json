@@ -1,0 +1,299 @@
+{
+  "environment": {
+    "torch": "2.11.0+cu130",
+    "cuda": "13.0",
+    "cudnn": 91900,
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "dtype": "torch.bfloat16"
+  },
+  "config": {
+    "model": "/home/agua/models/Qwen2.5-VL-3B-Instruct",
+    "image": "assets/dog.png",
+    "prompt": "描述这张图片",
+    "backends": [
+      "torch_math",
+      "torch_sdpa",
+      "cuda_fused",
+      "triton",
+      "flash_attn",
+      "cuda_hybrid",
+      "hybrid"
+    ],
+    "cases": [
+      "window",
+      "full"
+    ],
+    "warmup_iters": 5,
+    "measure_iters": 20,
+    "seed": 0
+  },
+  "input": {
+    "input_tokens": 2049,
+    "image_tokens": 2025,
+    "image_grid_thw": [
+      [
+        1,
+        90,
+        90
+      ]
+    ],
+    "pixel_values_shape": [
+      8100,
+      1176
+    ],
+    "vision_depth": 32,
+    "full_attention_blocks": [
+      7,
+      15,
+      23,
+      31
+    ],
+    "num_heads": 16,
+    "head_dim": 80
+  },
+  "cases": {
+    "window": {
+      "total_tokens": 8100,
+      "num_sequences": 144,
+      "sequence_lengths": {
+        "min": 4,
+        "max": 64,
+        "unique": [
+          4,
+          16,
+          64
+        ]
+      },
+      "attention_flops": 2566471680,
+      "backends": {
+        "torch_math": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 10.860594408586621,
+            "min": 10.31376700848341,
+            "p50": 10.917422361671925,
+            "p90": 11.23861582018435,
+            "max": 11.276889126747847
+          },
+          "peak_extra_memory_mb": 140.0,
+          "max_abs_error_vs_flash": 0.0078125,
+          "mean_abs_error_vs_flash": 0.00020745779329445213,
+          "query_tokens_per_s": 745815.532306037,
+          "estimated_tflops": 0.23631042495895918
+        },
+        "torch_sdpa": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 2.7762176236137748,
+            "min": 2.4497536942362785,
+            "p50": 2.5479700416326523,
+            "p90": 3.013213351368906,
+            "max": 4.7589680179953575
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.00390625,
+          "mean_abs_error_vs_flash": 1.9682618201954938e-08,
+          "query_tokens_per_s": 2917638.7078244644,
+          "estimated_tflops": 0.9244490266794176
+        },
+        "cuda_fused": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 1.1552373645827174,
+            "min": 1.030120998620987,
+            "p50": 1.0803465265780687,
+            "p90": 1.3701757416129114,
+            "max": 1.6237427480518818
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0078125,
+          "mean_abs_error_vs_flash": 0.00020746246445924044,
+          "query_tokens_per_s": 7011546.066920884,
+          "estimated_tflops": 2.2215968412059053
+        },
+        "triton": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 0.16199180390685797,
+            "min": 0.11060014367103577,
+            "p50": 0.11946004815399647,
+            "p90": 0.18450589850544963,
+            "max": 0.5928808823227882
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0078125,
+          "mean_abs_error_vs_flash": 8.781377982813865e-05,
+          "query_tokens_per_s": 50002529.78636707,
+          "estimated_tflops": 15.843219336428092
+        },
+        "flash_attn": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 0.15559024177491665,
+            "min": 0.11888006702065468,
+            "p50": 0.12410501949489117,
+            "p90": 0.16579227522015588,
+            "max": 0.5789613351225853
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0,
+          "mean_abs_error_vs_flash": 0.0,
+          "query_tokens_per_s": 52059820.1249523,
+          "estimated_tflops": 16.495068397109154
+        },
+        "cuda_hybrid": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 1.1029681889340281,
+            "min": 1.0265209712088108,
+            "p50": 1.0308618657290936,
+            "p90": 1.2589329387992623,
+            "max": 1.3913032598793507
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0078125,
+          "mean_abs_error_vs_flash": 0.00020746246445924044,
+          "query_tokens_per_s": 7343820.140296436,
+          "estimated_tflops": 2.3268773349486946
+        },
+        "hybrid": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 0.15433081425726414,
+            "min": 0.110650435090065,
+            "p50": 0.11638505384325981,
+            "p90": 0.16252403147518668,
+            "max": 0.6063510663807392
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0078125,
+          "mean_abs_error_vs_flash": 8.781377982813865e-05,
+          "query_tokens_per_s": 52484657.966603994,
+          "estimated_tflops": 16.629677568614262
+        }
+      }
+    },
+    "full": {
+      "total_tokens": 8100,
+      "num_sequences": 1,
+      "sequence_lengths": {
+        "min": 8100,
+        "max": 8100,
+        "unique": [
+          8100
+        ]
+      },
+      "attention_flops": 335923200000,
+      "backends": {
+        "torch_math": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 65.50447274930775,
+            "min": 64.74698800593615,
+            "p50": 65.29056909494102,
+            "p90": 66.14949554204941,
+            "max": 67.68629187718034
+          },
+          "peak_extra_memory_mb": 9210.93310546875,
+          "max_abs_error_vs_flash": 0.00048828125,
+          "mean_abs_error_vs_flash": 2.3152084395405836e-05,
+          "query_tokens_per_s": 123655.67815497913,
+          "estimated_tflops": 5.128248284443295
+        },
+        "torch_sdpa": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 4.47522543836385,
+            "min": 3.9776968769729137,
+            "p50": 4.4514574110507965,
+            "p90": 4.802636988461018,
+            "max": 4.912968259304762
+          },
+          "peak_extra_memory_mb": 139.775390625,
+          "max_abs_error_vs_flash": 0.000244140625,
+          "mean_abs_error_vs_flash": 1.989443987326922e-08,
+          "query_tokens_per_s": 1809964.6848095711,
+          "estimated_tflops": 75.06285540842254
+        },
+        "cuda_fused": {
+          "status": "error",
+          "error_type": "ValueError",
+          "error": "CUDA fused attention supports sequence lengths <= 64"
+        },
+        "triton": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 5.9742833487689495,
+            "min": 5.6571499444544315,
+            "p50": 5.937394453212619,
+            "p90": 6.303417030721903,
+            "max": 6.49681081995368
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.00048828125,
+          "mean_abs_error_vs_flash": 3.261166057200171e-05,
+          "query_tokens_per_s": 1355811.1537627473,
+          "estimated_tflops": 56.22820016884866
+        },
+        "flash_attn": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 4.399113194085658,
+            "min": 4.066957160830498,
+            "p50": 4.361156839877367,
+            "p90": 4.706547921523452,
+            "max": 4.775448236614466
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0,
+          "mean_abs_error_vs_flash": 0.0,
+          "query_tokens_per_s": 1841280.1950379366,
+          "estimated_tflops": 76.36157224861331
+        },
+        "cuda_hybrid": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 4.344866750761867,
+            "min": 4.0831672959029675,
+            "p50": 4.325286950916052,
+            "p90": 4.666846990585327,
+            "max": 4.727307241410017
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0,
+          "mean_abs_error_vs_flash": 0.0,
+          "query_tokens_per_s": 1864268.9096460035,
+          "estimated_tflops": 77.31496022083907
+        },
+        "hybrid": {
+          "status": "ok",
+          "latency_ms": {
+            "count": 20,
+            "mean": 4.351761774159968,
+            "min": 3.8769072853028774,
+            "p50": 4.3367124162614346,
+            "p90": 4.618839873000979,
+            "max": 4.790597595274448
+          },
+          "peak_extra_memory_mb": 140.224609375,
+          "max_abs_error_vs_flash": 0.0,
+          "mean_abs_error_vs_flash": 0.0,
+          "query_tokens_per_s": 1861315.1225548335,
+          "estimated_tflops": 77.19246076259405
+        }
+      }
+    }
+  }
+}

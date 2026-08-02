@@ -29,6 +29,8 @@ OpenAI Chat Completions 兼容接口。
 - 服务级最大并发和 HTTP 429 backpressure。
 - C1/C2/C4 正确性与吞吐回归。
 - JSON profiling 报告。
+- Qwen2.5-VL-3B-Instruct-AWQ 在线 native/SSE/OpenAI 推理。
+- `/health` 和 profile JSON 暴露量化格式与 AWQ kernel。
 
 当前限制：
 
@@ -56,6 +58,10 @@ OpenAI Chat Completions 兼容接口。
   单档并发 profiling。
 - `examples/qwen2_5_vl_online_regression.py`
   C1/C2/C4 自动回归和总报告。
+- `benchmarks/qwen2_5_vl_serving_benchmark.py`
+  使用同一 OpenAI SSE 负载测试 BF16、AWQ 和 vLLM。
+- `benchmarks/compare_awq_online_profiles.py`
+  汇总 BF16/AWQ C1/C2/C4 差异。
 - `tests/test_async_llm_engine.py`
   engine streaming、continuous batching、取消和 KV Cache 回收测试。
 - `tests/test_online_server.py`
@@ -963,3 +969,33 @@ decode 在总耗时中的占比较小。Amdahl 定律决定了只优化较短阶
 
 后续工作应回到 nano-vllm 核心能力：Attention backend、prefix cache、
 multimodal prefill 改进和 AWQ W4A16，而不是继续扩展外围应用。
+
+## 22. AWQ 在线推理
+
+AWQ checkpoint 复用相同在线控制面，只替换文本 Decoder Linear 的权重表示和
+执行 kernel。模型仍然在服务启动时加载一次，不会按 HTTP 请求重复加载。
+
+```bash
+/home/agua/anaconda3/envs/yolo26/bin/python \
+  examples/qwen2_5_vl_server.py \
+  --model /home/agua/models/Qwen2.5-VL-3B-Instruct-AWQ \
+  --served-model-name /home/agua/models/Qwen2.5-VL-3B-Instruct-AWQ \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --max-model-len 4096 \
+  --max-num-seqs 4 \
+  --max-num-batched-tokens 4096 \
+  --gpu-memory-utilization 0.72 \
+  --max-concurrent-requests 4 \
+  --awq-kernel dequantize
+```
+
+实际验证覆盖 `/generate`、原生 SSE、OpenAI 非流式和 OpenAI SSE，前 4 个 greedy
+token 均为 `[108893, 45930, 101987, 99593]`。C1/C2/C4 的 AWQ output throughput
+分别为 `28.30/41.26/55.07 tok/s`，BF16 为 `38.25/54.01/66.38 tok/s`。
+当前反量化加 cuBLAS 路径降低权重容量但增加 TPOT，完整分析见：
+
+```text
+docs/qwen2_5_vl_awq.md
+profiles/awq_online/summary.json
+```

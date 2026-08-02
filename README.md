@@ -60,6 +60,16 @@ See `bench.py` for benchmark.
 | vLLM           | 133,966     | 98.37    | 1361.84               |
 | Nano-vLLM      | 133,966     | 93.41    | 1434.13               |
 
+## Qwen2.5-VL Extension
+
+This workspace extends nano-vllm with Qwen2.5-VL offline and online inference,
+continuous batched decode, SSE/OpenAI Chat Completions, AWQ W4A16 loading,
+pluggable Vision Attention backends, custom CUDA/Triton kernels, and profiling.
+
+The implementation guide, measured results, Nsight workflow, reproduction commands,
+limitations, and interview notes are collected in
+[`docs/nano_vllm_qwen2_5_vl_interview_guide.md`](docs/nano_vllm_qwen2_5_vl_interview_guide.md).
+
 
 ## Star History
 

@@ -1,5 +1,6 @@
 from nanovllm.kernels.cuda_ops import (
     cuda_matmul,
+    cuda_packed_attention,
     cuda_rms_norm,
     cuda_silu_and_mul,
     cuda_softmax,
@@ -13,6 +14,7 @@ from nanovllm.kernels.triton_ops import (
 
 __all__ = [
     "cuda_matmul",
+    "cuda_packed_attention",
     "cuda_rms_norm",
     "cuda_silu_and_mul",
     "cuda_softmax",
